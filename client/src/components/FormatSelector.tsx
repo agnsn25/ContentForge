@@ -1,4 +1,5 @@
 import { Mail, Video, FileText } from 'lucide-react';
+import { RiTwitterXFill } from 'react-icons/ri';
 import { Card } from '@/components/ui/card';
 import type { TargetFormat } from '@shared/schema';
 
@@ -18,13 +19,19 @@ const formats = [
     id: 'social' as TargetFormat,
     icon: Video,
     title: 'Social Tutorial',
-    description: 'Step-by-step guide optimized for social media',
+    description: 'Carousel slides optimized for social media',
   },
   {
     id: 'blog' as TargetFormat,
     icon: FileText,
     title: 'Blog Post',
     description: 'Long-form article with proper structure and SEO',
+  },
+  {
+    id: 'x' as TargetFormat,
+    icon: RiTwitterXFill,
+    title: 'X Thread',
+    description: 'Twitter/X thread with engaging tweets and hashtags',
   },
 ];
 
@@ -38,7 +45,7 @@ export default function FormatSelector({ selectedFormat, onSelectFormat }: Forma
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {formats.map((format) => {
           const Icon = format.icon;
           const isSelected = selectedFormat === format.id;
