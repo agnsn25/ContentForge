@@ -19,12 +19,12 @@ ContentForge is an AI-powered web application that transforms long-form content 
 ## Recent Changes (October 17, 2025)
 
 ### Format-Specific Output Structures & X Thread Generator (Latest)
-- **Added X/Twitter Thread Format**: New format option that generates 8-12 tweet threads with numbered tweets, hashtags, and CTAs
+- **Added X/Twitter Thread Format**: New format option that generates 8-12 tweet threads with numbered tweets and CTAs (no hashtags - platform is moving away from them)
 - **Unique Output Structures**: Each format now has its own specialized structure instead of generic sections:
   - **Newsletter**: Intro, sections with bullet points, Quick Takeaway box, Call to Action
   - **Blog Post**: Meta description, introduction, sections, conclusion with word count
   - **Social Tutorial**: Hook slide + numbered carousel slides (8-10 slides)
-  - **X Thread**: Numbered tweets (e.g., 1/10, 2/10) with character limit and hashtags
+  - **X Thread**: Numbered tweets (e.g., 1/10, 2/10) with character limit (no hashtags)
 - **Enhanced AI Prompts**: Updated all Grok AI system prompts with format-specific requirements (400-600 words for newsletter, 800-1200 for blog, etc.)
 - **Improved ContentPreview**: Now renders format-specific layouts with proper styling for each output type
 - **FormatSelector UI**: Updated to show 4 format cards with responsive grid layout
@@ -175,7 +175,7 @@ XThreadContent {
 1. **Newsletter** (400-600 words): Brief intro, sections with bullet points, Quick Takeaway box, Call to Action
 2. **Social Tutorial** (8-10 slides): Hook slide + carousel-style slides with emojis (max 280 chars per slide)
 3. **Blog Post** (800-1200 words): Meta description, introduction, sections with transitions, conclusion
-4. **X Thread** (8-12 tweets): Numbered tweets (1/10, 2/10...) with hashtags, max 280 chars per tweet
+4. **X Thread** (8-12 tweets): Numbered tweets (1/10, 2/10...) with max 280 chars per tweet (no hashtags)
 
 ### Export Options
 - Copy to clipboard (Markdown format)

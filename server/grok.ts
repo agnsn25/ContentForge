@@ -111,10 +111,10 @@ Requirements:
 - Tweet 1: Attention-grabbing hook with the main insight
 - Each tweet: One clear idea (max 280 characters)
 - Use line breaks for readability
-- Include relevant hashtags (2-3 max)
 - Last tweet: Summary or CTA
 - Conversational, punchy tone
 - Number the tweets (1/10, 2/10, etc.)
+- NO hashtags (platform is moving away from them)
 - Format as: "1/10\\n[tweet content]\\n\\n2/10\\n[tweet content]" etc.
 
 Return ONLY a valid JSON object with this structure:
@@ -123,7 +123,7 @@ Return ONLY a valid JSON object with this structure:
     {
       "tweetNumber": 1,
       "totalTweets": 10,
-      "content": "Tweet content with hashtags (max 280 chars)"
+      "content": "Tweet content (max 280 chars, no hashtags)"
     }
   ],
   "metadata": {
