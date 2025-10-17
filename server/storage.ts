@@ -17,8 +17,15 @@ export class MemStorage implements IStorage {
   async createContentJob(insertJob: InsertContentJob): Promise<ContentJob> {
     const id = randomUUID();
     const job: ContentJob = {
-      ...insertJob,
       id,
+      sourceType: insertJob.sourceType,
+      sourceUrl: insertJob.sourceUrl || null,
+      fileName: insertJob.fileName || null,
+      transcript: insertJob.transcript,
+      targetFormat: insertJob.targetFormat,
+      transformedContent: insertJob.transformedContent || null,
+      status: insertJob.status || 'processing',
+      error: insertJob.error || null,
       createdAt: new Date(),
     };
     this.jobs.set(id, job);

@@ -58,9 +58,10 @@ export default function Home() {
   const pollJobStatus = async (jobId: string) => {
     const interval = setInterval(async () => {
       try {
-        const result = await apiRequest<any>('GET', `/api/job/${jobId}`);
+        const response = await apiRequest('GET', `/api/job/${jobId}`);
+        const result = await response.json();
         
-        setProgress(Math.min(progress + 10, 90));
+        setProgress((prev) => Math.min(prev + 10, 90));
         
         if (result.status === 'completed') {
           clearInterval(interval);
