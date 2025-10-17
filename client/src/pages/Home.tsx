@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, LogOut, History as HistoryIcon } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 import UploadZone from '@/components/UploadZone';
 import FormatSelector from '@/components/FormatSelector';
 import ProcessingIndicator from '@/components/ProcessingIndicator';
@@ -8,10 +9,20 @@ import ContentPreview from '@/components/ContentPreview';
 import ThemeToggle from '@/components/ThemeToggle';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { apiRequest } from '@/lib/queryClient';
 import type { TargetFormat, TransformedContent, JobStatus } from '@shared/schema';
 
 export default function Home() {
+  const { user } = useAuth();
   const [selectedFormat, setSelectedFormat] = useState<TargetFormat | null>(null);
   const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
   const [transformedContent, setTransformedContent] = useState<TransformedContent | null>(null);
@@ -114,10 +125,52 @@ export default function Home() {
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-6 h-6 text-primary" />
-            <h1 className="text-xl font-bold text-foreground">ContentForge</h1>
+            <Sparkles className="w-6 h-6 text-primary" data-testid="icon-logo" />
+            <h1 className="text-xl font-bold text-foreground" data-testid="text-app-name">ContentForge</h1>
           </div>
-          <ThemeToggle />
+          
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => window.location.href = '/history'}
+              data-testid="button-history-nav"
+            >
+              <HistoryIcon className="h-4 w-4 mr-2" />
+              History
+            </Button>
+            
+            <ThemeToggle />
+            
+            {user && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="gap-2" data-testid="button-user-menu">
+                    <Avatar className="h-7 w-7">
+                      <AvatarImage src={user.profileImageUrl || undefined} />
+                      <AvatarFallback>
+                        {user.firstName?.[0] || user.email?.[0] || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="hidden sm:inline-block" data-testid="text-user-name">
+                      {user.firstName || user.email?.split('@')[0] || 'User'}
+                    </span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel data-testid="text-user-email">{user.email}</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onClick={() => window.location.href = '/api/logout'}
+                    data-testid="button-logout"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
         </div>
       </header>
 
