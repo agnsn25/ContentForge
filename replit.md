@@ -1,18 +1,38 @@
 # ContentForge - AI-Powered Content Repurposing Tool
 
 ## Overview
-ContentForge is an AI-powered web application that transforms long-form content (podcasts, videos, YouTube links, Spotify podcasts) into targeted formats like newsletters, social media tutorials, and blog posts. Built with React, Express, and Grok AI (xAI), the tool streamlines content repurposing for creators.
+ContentForge is an AI-powered web application that transforms long-form content (podcasts, videos, YouTube links, Spotify podcasts) into targeted formats like newsletters, social media tutorials, and blog posts. Built with React, Express, PostgreSQL, Replit Auth, and Grok AI (xAI), the tool streamlines content repurposing for creators with user authentication and content history.
 
 ## Current State
-**Status**: MVP Complete ✅
+**Status**: Full Featured Application ✅
+- User authentication with Replit Auth (Google, GitHub, Email, X, Apple)
+- PostgreSQL database for persistent storage
+- Content history and saved transformations
 - Fully functional content transformation pipeline
 - Beautiful, responsive UI with dark mode support
-- YouTube and Spotify link support with transcript extraction
+- YouTube transcript extraction (using @danielxceron/youtube-transcript)
+- Spotify link metadata support
 - File upload for audio, video, and text files
 - Real-time AI processing with progress indicators
 - Export functionality (copy/download as Markdown)
 
 ## Recent Changes (October 17, 2025)
+
+### Authentication & Database Update
+- **Implemented Replit Auth**: Full user authentication with Google, GitHub, Email, X (Twitter), and Apple login
+- **PostgreSQL Database**: Migrated from in-memory to PostgreSQL for persistent storage
+- **User Profiles**: Users table with email, name, and profile image
+- **Content History**: All transformations saved and linked to user accounts
+- **Landing Page**: Beautiful landing page for logged-out users
+- **History Page**: View and manage all saved transformations
+- **Protected Routes**: Secure API endpoints for authenticated users
+- **Guest Support**: Transformation works for both logged-in and guest users
+
+### Bug Fixes
+- **Fixed YouTube Transcript**: Replaced broken `youtube-transcript` with `@danielxceron/youtube-transcript`
+- YouTube transcripts now extract correctly with timestamps
+
+### Initial MVP (Earlier)
 - Implemented complete frontend with Notion-inspired document interface
 - Configured design system with indigo primary (#6366F1), emerald secondary (#10B981), and amber accent (#F59E0B)
 - Built all React components: UploadZone, FormatSelector, ProcessingIndicator, ContentPreview
@@ -33,7 +53,12 @@ ContentForge is an AI-powered web application that transforms long-form content 
   - `ThemeToggle.tsx` - Light/dark mode switcher with persistence
 
 - **Pages**:
-  - `Home.tsx` - Main application page with complete workflow
+  - `Landing.tsx` - Marketing page for logged-out users with feature showcase
+  - `Home.tsx` - Main application page with user dropdown and content transformation
+  - `History.tsx` - View all saved transformations with filtering and search
+
+- **Hooks**:
+  - `useAuth.ts` - Authentication hook for checking login status and user info
 
 - **Styling**:
   - Tailwind CSS with custom design tokens
@@ -43,13 +68,20 @@ ContentForge is an AI-powered web application that transforms long-form content 
 
 ### Backend (Express + TypeScript)
 - **API Routes** (`server/routes.ts`):
-  - `POST /api/transform` - Upload file or submit link, start transformation
+  - `GET /api/login` - Initiate Replit Auth login flow
+  - `GET /api/logout` - Logout and clear session
+  - `GET /api/callback` - OAuth callback handler
+  - `GET /api/auth/user` - Get current user info (protected)
+  - `GET /api/content/history` - Get user's transformation history (protected)
+  - `POST /api/transform` - Upload file or submit link, start transformation (works for guests too)
   - `GET /api/job/:id` - Poll job status and retrieve results
 
 - **Services**:
+  - `replitAuth.ts` - Replit Auth/OpenID Connect integration with session management
   - `grok.ts` - Grok AI integration for content transformation
-  - `transcript.ts` - YouTube/Spotify transcript extraction
-  - `storage.ts` - In-memory job storage (MemStorage)
+  - `transcript.ts` - YouTube/Spotify transcript extraction (fixed with @danielxceron/youtube-transcript)
+  - `storage.ts` - PostgreSQL database operations (DatabaseStorage)
+  - `db.ts` - Drizzle ORM database connection
 
 - **AI Integration**:
   - Uses xAI Grok API (grok-2-1212 model) with 131K token context
@@ -58,8 +90,28 @@ ContentForge is an AI-powered web application that transforms long-form content 
 
 ### Data Schema (`shared/schema.ts`)
 ```typescript
+// User table (for Replit Auth)
+User {
+  id: string (varchar, primary key)
+  email: string | null
+  firstName: string | null
+  lastName: string | null
+  profileImageUrl: string | null
+  createdAt: Date
+  updatedAt: Date
+}
+
+// Sessions table (for Replit Auth)
+Session {
+  sid: string (primary key)
+  sess: jsonb
+  expire: timestamp
+}
+
+// Content jobs (linked to users)
 ContentJob {
-  id: string
+  id: string (varchar, primary key)
+  userId: string | null (foreign key to users)
   sourceType: 'file' | 'youtube' | 'spotify'
   sourceUrl?: string
   fileName?: string
@@ -74,10 +126,23 @@ ContentJob {
 
 ## Key Features
 
+### Authentication
+- **Replit Auth**: Secure OpenID Connect authentication
+- **Login Methods**: Google, GitHub, Email/Password, X (Twitter), Apple
+- **Session Management**: PostgreSQL-backed sessions with 7-day expiry
+- **User Profiles**: Automatic user creation with email and profile picture
+- **Protected Routes**: Middleware for securing API endpoints
+
 ### Content Input
 - **File Upload**: Drag-and-drop for audio, video, text files (up to 100MB)
-- **YouTube Links**: Automatic transcript extraction with timestamps
+- **YouTube Links**: Automatic transcript extraction with timestamps (using @danielxceron/youtube-transcript)
 - **Spotify Links**: Podcast metadata retrieval (note: full transcription requires external service)
+
+### Content History
+- **Saved Transformations**: All completed jobs saved to database
+- **History Page**: View all past transformations with date, format, source
+- **Quick Access**: Click to view any saved transformation
+- **User-Specific**: Each user sees only their own content
 
 ### Transformation Formats
 1. **Newsletter**: Email-friendly format with key takeaways and sections
@@ -98,30 +163,34 @@ ContentJob {
 
 ## Environment Variables
 - `XAI_API_KEY` - xAI API key for Grok integration (configured in Replit Secrets)
-- `SESSION_SECRET` - Session secret for Express (pre-configured)
+- `SESSION_SECRET` - Session secret for Express (auto-configured by Replit)
+- `DATABASE_URL` - PostgreSQL connection string (auto-configured)
+- `REPL_ID` - Replit app ID for OAuth (auto-configured)
+- `REPLIT_DOMAINS` - App domains for OAuth callbacks (auto-configured)
+- `ISSUER_URL` - OAuth issuer URL (defaults to https://replit.com/oidc)
 
 ## Technical Stack
 - **Frontend**: React 18, TypeScript, Tailwind CSS, Shadcn UI, React Query, Wouter
-- **Backend**: Express.js, Multer, TypeScript
+- **Backend**: Express.js, Passport.js, OpenID Client, Multer, TypeScript
+- **Database**: PostgreSQL (Neon), Drizzle ORM
+- **Authentication**: Replit Auth (OpenID Connect)
 - **AI**: xAI Grok (via OpenAI SDK)
-- **Transcript Services**: youtube-transcript, spotify-url-info
-- **Storage**: In-memory (MemStorage) for MVP
+- **Transcript Services**: @danielxceron/youtube-transcript, spotify-url-info
 
-## Known Limitations (MVP)
+## Known Limitations
 1. Audio/video files uploaded directly cannot be transcribed (would require Whisper AI integration)
 2. Spotify podcasts return metadata only (full transcription needs external service)
-3. In-memory storage (data lost on restart) - production would use PostgreSQL
-4. No user authentication or content history (future phase)
+3. Guest transformations are saved but not linked to users (one-time use)
 
 ## Future Enhancements
-- User accounts with content history
 - Batch processing for multiple files
 - Custom template creation
 - Direct publishing integrations (Medium, LinkedIn, Twitter/X)
 - Advanced AI features (tone adjustment, audience targeting)
-- PostgreSQL persistence
 - Audio/video transcription with Whisper AI
 - Real-time collaboration features
+- Content editing and refinement
+- Team workspaces and sharing
 
 ## Development Guidelines
 - Follow design_guidelines.md for all UI implementations
