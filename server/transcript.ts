@@ -1,5 +1,5 @@
 import { YoutubeTranscript } from 'youtube-transcript';
-import { getData } from 'spotify-url-info';
+import spotifyUrlInfo from 'spotify-url-info';
 
 export async function getYoutubeTranscript(url: string): Promise<{ transcript: string; title: string }> {
   try {
@@ -32,6 +32,7 @@ export async function getYoutubeTranscript(url: string): Promise<{ transcript: s
 
 export async function getSpotifyTranscript(url: string): Promise<{ transcript: string; title: string }> {
   try {
+    const getData = spotifyUrlInfo(fetch);
     const data = await getData(url);
     
     // Spotify doesn't provide transcripts directly, so we'll return metadata
