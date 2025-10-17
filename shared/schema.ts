@@ -53,19 +53,71 @@ export type User = typeof users.$inferSelect;
 
 // Frontend-only types for UI state
 export type SourceType = 'file' | 'youtube' | 'spotify';
-export type TargetFormat = 'newsletter' | 'social' | 'blog';
+export type TargetFormat = 'newsletter' | 'social' | 'blog' | 'x';
 export type JobStatus = 'processing' | 'completed' | 'error';
 
-export interface TransformedContent {
+// Format-specific output structures
+export interface NewsletterContent {
   title: string;
+  intro: string;
   sections: {
     heading: string;
     content: string;
-    timestamp?: string;
+    bulletPoints?: string[];
   }[];
-  metadata?: {
+  quickTakeaway: string;
+  callToAction: string;
+  metadata: {
     originalSource: string;
     transformedAt: string;
-    format: TargetFormat;
+    format: 'newsletter';
+    wordCount: number;
   };
 }
+
+export interface BlogContent {
+  title: string;
+  metaDescription: string;
+  introduction: string;
+  sections: {
+    heading: string;
+    content: string;
+  }[];
+  conclusion: string;
+  metadata: {
+    originalSource: string;
+    transformedAt: string;
+    format: 'blog';
+    wordCount: number;
+  };
+}
+
+export interface SocialContent {
+  hook: string;
+  slides: {
+    slideNumber: number;
+    content: string;
+  }[];
+  metadata: {
+    originalSource: string;
+    transformedAt: string;
+    format: 'social';
+    totalSlides: number;
+  };
+}
+
+export interface XThreadContent {
+  tweets: {
+    tweetNumber: number;
+    totalTweets: number;
+    content: string;
+  }[];
+  metadata: {
+    originalSource: string;
+    transformedAt: string;
+    format: 'x';
+    totalTweets: number;
+  };
+}
+
+export type TransformedContent = NewsletterContent | BlogContent | SocialContent | XThreadContent;
