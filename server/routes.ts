@@ -46,7 +46,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { sourceType, targetFormat, url } = req.body;
       const file = req.file;
 
-      if (!targetFormat || !['newsletter', 'social', 'blog'].includes(targetFormat)) {
+      if (!targetFormat || !['newsletter', 'social', 'blog', 'x'].includes(targetFormat)) {
         return res.status(400).json({ error: 'Invalid target format' });
       }
 
