@@ -11,7 +11,7 @@ export default function Landing() {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles className="h-6 w-6 text-primary" data-testid="icon-logo" />
-            <span className="text-xl font-semibold" data-testid="text-app-name">ContentForge</span>
+            <span className="text-xl font-semibold" data-testid="text-app-name">ContentHammer</span>
           </div>
           <div className="flex items-center gap-4">
             <ThemeToggle />
@@ -58,7 +58,7 @@ export default function Landing() {
       {/* Features Section */}
       <section id="features" className="container mx-auto px-4 py-16">
         <h2 className="text-3xl font-bold text-center mb-12" data-testid="heading-features">
-          Why Choose ContentForge?
+          Why Choose ContentHammer?
         </h2>
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
           <Card className="p-6 space-y-4" data-testid="card-feature-ai">
@@ -110,7 +110,7 @@ export default function Landing() {
             Ready to Transform Your Content?
           </h2>
           <p className="text-lg text-muted-foreground" data-testid="text-cta">
-            Join thousands of creators who use ContentForge to repurpose their content effortlessly.
+            Join thousands of creators who use ContentHammer to repurpose their content effortlessly.
           </p>
           <Button 
             size="lg"
@@ -127,7 +127,7 @@ export default function Landing() {
         <div className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground" data-testid="text-copyright">
-              © 2025 ContentForge. All rights reserved.
+              © 2025 ContentHammer. All rights reserved.
             </p>
             <div className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-primary" />

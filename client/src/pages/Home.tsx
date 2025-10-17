@@ -126,7 +126,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles className="w-6 h-6 text-primary" data-testid="icon-logo" />
-            <h1 className="text-xl font-bold text-foreground" data-testid="text-app-name">ContentForge</h1>
+            <h1 className="text-xl font-bold text-foreground" data-testid="text-app-name">ContentHammer</h1>
           </div>
           
           <div className="flex items-center gap-4">

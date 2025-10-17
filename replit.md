@@ -1,7 +1,7 @@
-# ContentForge - AI-Powered Content Repurposing Tool
+# ContentHammer - AI-Powered Content Repurposing Tool
 
 ## Overview
-ContentForge is an AI-powered web application that transforms long-form content (podcasts, videos, YouTube links, Spotify podcasts) into targeted formats like newsletters, social media tutorials, and blog posts. Built with React, Express, PostgreSQL, Replit Auth, and Grok AI (xAI), the tool streamlines content repurposing for creators with user authentication and content history.
+ContentHammer is an AI-powered web application that transforms long-form content (podcasts, videos, YouTube links, Spotify podcasts) into targeted formats like newsletters, social media tutorials, and blog posts. Built with React, Express, PostgreSQL, Replit Auth, and Grok AI (xAI), the tool streamlines content repurposing for creators with user authentication and content history.
 
 ## Current State
 **Status**: Full Featured Application ✅
