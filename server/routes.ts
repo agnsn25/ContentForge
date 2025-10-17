@@ -34,7 +34,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fileName = file.originalname;
         sourceInfo = fileName;
       } else if (sourceType === 'youtube' && url) {
+        console.log('Fetching YouTube transcript for:', url);
         const result = await getYoutubeTranscript(url);
+        console.log('Transcript length:', result.transcript.length);
+        console.log('First 200 chars:', result.transcript.substring(0, 200));
         transcript = result.transcript;
         sourceUrl = url;
         sourceInfo = result.title;
@@ -101,6 +104,8 @@ async function processTransformation(
   sourceInfo: string
 ) {
   try {
+    console.log('Processing transformation for job:', jobId);
+    console.log('Transcript length being sent to Grok:', transcript.length);
     const transformedContent = await transformContent(transcript, targetFormat, sourceInfo);
     
     await storage.updateContentJob(jobId, {

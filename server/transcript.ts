@@ -1,4 +1,4 @@
-import { YoutubeTranscript } from 'youtube-transcript';
+import { YoutubeTranscript } from '@danielxceron/youtube-transcript';
 import spotifyUrlInfo from 'spotify-url-info';
 
 export async function getYoutubeTranscript(url: string): Promise<{ transcript: string; title: string }> {
