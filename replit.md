@@ -18,6 +18,17 @@ ContentForge is an AI-powered web application that transforms long-form content 
 
 ## Recent Changes (October 17, 2025)
 
+### Format-Specific Output Structures & X Thread Generator (Latest)
+- **Added X/Twitter Thread Format**: New format option that generates 8-12 tweet threads with numbered tweets, hashtags, and CTAs
+- **Unique Output Structures**: Each format now has its own specialized structure instead of generic sections:
+  - **Newsletter**: Intro, sections with bullet points, Quick Takeaway box, Call to Action
+  - **Blog Post**: Meta description, introduction, sections, conclusion with word count
+  - **Social Tutorial**: Hook slide + numbered carousel slides (8-10 slides)
+  - **X Thread**: Numbered tweets (e.g., 1/10, 2/10) with character limit and hashtags
+- **Enhanced AI Prompts**: Updated all Grok AI system prompts with format-specific requirements (400-600 words for newsletter, 800-1200 for blog, etc.)
+- **Improved ContentPreview**: Now renders format-specific layouts with proper styling for each output type
+- **FormatSelector UI**: Updated to show 4 format cards with responsive grid layout
+
 ### Authentication & Database Update
 - **Implemented Replit Auth**: Full user authentication with Google, GitHub, Email, X (Twitter), and Apple login
 - **PostgreSQL Database**: Migrated from in-memory to PostgreSQL for persistent storage
@@ -47,9 +58,9 @@ ContentForge is an AI-powered web application that transforms long-form content 
 ### Frontend (React + TypeScript)
 - **Components**:
   - `UploadZone.tsx` - Drag-and-drop file upload + link input with mode toggle
-  - `FormatSelector.tsx` - Interactive format selection cards (Newsletter/Social/Blog)
+  - `FormatSelector.tsx` - Interactive format selection cards (Newsletter/Social/Blog/X Thread)
   - `ProcessingIndicator.tsx` - Beautiful progress bar with status updates
-  - `ContentPreview.tsx` - Document-style preview with timestamps and export controls
+  - `ContentPreview.tsx` - Format-specific preview rendering with export controls
   - `ThemeToggle.tsx` - Light/dark mode switcher with persistence
 
 - **Pages**:
@@ -85,8 +96,10 @@ ContentForge is an AI-powered web application that transforms long-form content 
 
 - **AI Integration**:
   - Uses xAI Grok API (grok-2-1212 model) with 131K token context
-  - Format-specific system prompts for Newsletter, Social Tutorial, Blog Post
-  - JSON-structured responses with title, sections, timestamps, metadata
+  - Format-specific system prompts for Newsletter, Social Tutorial, Blog Post, and X Thread
+  - Unique JSON-structured responses tailored to each format
+  - Word count requirements: 400-600 for newsletter, 800-1200 for blog
+  - Character limits: 280 chars per tweet, per slide for social
 
 ### Data Schema (`shared/schema.ts`)
 ```typescript
@@ -116,11 +129,25 @@ ContentJob {
   sourceUrl?: string
   fileName?: string
   transcript: string
-  targetFormat: 'newsletter' | 'social' | 'blog'
+  targetFormat: 'newsletter' | 'social' | 'blog' | 'x'
   transformedContent?: string
   status: 'processing' | 'completed' | 'error'
   error?: string
   createdAt: Date
+}
+
+// Format-specific output types
+NewsletterContent {
+  title, intro, sections[], quickTakeaway, callToAction, metadata
+}
+BlogContent {
+  title, metaDescription, introduction, sections[], conclusion, metadata
+}
+SocialContent {
+  hook, slides[], metadata
+}
+XThreadContent {
+  tweets[], metadata
 }
 ```
 
@@ -145,9 +172,10 @@ ContentJob {
 - **User-Specific**: Each user sees only their own content
 
 ### Transformation Formats
-1. **Newsletter**: Email-friendly format with key takeaways and sections
-2. **Social Tutorial**: Step-by-step guide with timestamps for social media
-3. **Blog Post**: Long-form article with SEO-friendly structure
+1. **Newsletter** (400-600 words): Brief intro, sections with bullet points, Quick Takeaway box, Call to Action
+2. **Social Tutorial** (8-10 slides): Hook slide + carousel-style slides with emojis (max 280 chars per slide)
+3. **Blog Post** (800-1200 words): Meta description, introduction, sections with transitions, conclusion
+4. **X Thread** (8-12 tweets): Numbered tweets (1/10, 2/10...) with hashtags, max 280 chars per tweet
 
 ### Export Options
 - Copy to clipboard (Markdown format)
