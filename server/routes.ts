@@ -5,6 +5,7 @@ import { storage } from "./storage";
 import { transformContent } from "./grok";
 import { getYoutubeTranscript, getSpotifyTranscript, extractTextFromFile } from "./transcript";
 import type { TargetFormat } from "@shared/schema";
+import { setupAuth, isAuthenticated } from "./replitAuth";
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -12,9 +13,35 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Set up authentication
+  await setupAuth(app);
+
+  // Auth routes
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Get user's content history
+  app.get('/api/content/history', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const jobs = await storage.getUserContentJobs(userId);
+      res.json(jobs);
+    } catch (error) {
+      console.error("Error fetching content history:", error);
+      res.status(500).json({ message: "Failed to fetch content history" });
+    }
+  });
   
-  // Transform content endpoint
-  app.post('/api/transform', upload.single('file'), async (req, res) => {
+  // Transform content endpoint (works for both authenticated and guest users)
+  app.post('/api/transform', upload.single('file'), async (req: any, res) => {
     try {
       const { sourceType, targetFormat, url } = req.body;
       const file = req.file;
@@ -50,8 +77,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Invalid source type or missing data' });
       }
 
+      // Get userId if user is authenticated
+      const userId = req.isAuthenticated() ? req.user.claims.sub : null;
+
       // Create job in storage
       const job = await storage.createContentJob({
+        userId,
         sourceType,
         sourceUrl: sourceUrl || null,
         fileName: fileName || null,
