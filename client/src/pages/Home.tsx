@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { apiRequest } from '@/lib/queryClient';
 import type { TargetFormat, TransformedContent, JobStatus, WritingSample } from '@shared/schema';
-import logoUrl from "@assets/Gemini_Generated_Image_sde2j4sde2j4sde2_1760736424242.png";
+import logoUrl from "@assets/hammer-logo.png";
 
 export default function Home() {
   const { user } = useAuth();
@@ -138,7 +138,7 @@ export default function Home() {
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img src={logoUrl} alt="ContentHammer Logo" className="w-7 h-7" data-testid="icon-logo" />
+            <img src={logoUrl} alt="ContentHammer Logo" className="h-8 w-auto" data-testid="icon-logo" />
             <h1 className="text-xl font-bold text-foreground" data-testid="text-app-name">ContentHammer</h1>
           </div>
           

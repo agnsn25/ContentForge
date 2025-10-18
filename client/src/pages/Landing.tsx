@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Sparkles, Zap, Clock, Shield } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
-import logoUrl from "@assets/Gemini_Generated_Image_sde2j4sde2j4sde2_1760736424242.png";
+import logoUrl from "@assets/hammer-logo.png";
 
 export default function Landing() {
   return (
@@ -11,7 +11,7 @@ export default function Landing() {
       <header className="border-b">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img src={logoUrl} alt="ContentHammer Logo" className="h-7 w-7" data-testid="icon-logo" />
+            <img src={logoUrl} alt="ContentHammer Logo" className="h-8 w-auto" data-testid="icon-logo" />
             <span className="text-xl font-semibold" data-testid="text-app-name">ContentHammer</span>
           </div>
           <div className="flex items-center gap-4">
