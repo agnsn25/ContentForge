@@ -126,6 +126,18 @@ export default function WritingSamples() {
               Home
             </Button>
 
+            {user && (
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled
+                data-testid="button-writing-samples-nav"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Writing Samples
+              </Button>
+            )}
+
             <Button
               variant="ghost"
               size="sm"

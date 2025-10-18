@@ -33,10 +33,16 @@ ContentHammer is an AI-powered web application that transforms long-form content
   - GET /api/writing-samples (list user's samples)
   - POST /api/writing-samples (create sample with validation)
   - DELETE /api/writing-samples/:id (remove sample)
+- **Navigation Updates**:
+  - "Writing Samples" moved to main navigation bar (positioned left of "History")
+  - Removed "Writing Samples" from user dropdown menu (now only contains "Log out")
+  - All pages (Home, History, WritingSamples) have consistent navigation headers
+  - Current page button is disabled for visual indication
+  - Full dark/light mode support across all pages
 - **UI Updates**:
-  - Added "Writing Samples" link in user dropdown menu
   - Style matching checkbox on home page (appears when samples exist)
   - Clean, intuitive sample management interface
+  - Consistent header navigation across all pages
 
 ## Recent Changes (October 17, 2025)
 
@@ -87,9 +93,16 @@ ContentHammer is an AI-powered web application that transforms long-form content
 
 - **Pages**:
   - `Landing.tsx` - Marketing page for logged-out users with feature showcase
-  - `Home.tsx` - Main application page with user dropdown and content transformation
-  - `History.tsx` - View all saved transformations with filtering and search
+  - `Home.tsx` - Main application page with navigation bar and content transformation
+  - `History.tsx` - View all saved transformations with consistent navigation header
   - `WritingSamples.tsx` - Manage writing samples for style matching (max 2 samples, 800 words each)
+
+- **Navigation**:
+  - Consistent navigation header across all pages (Home, History, WritingSamples)
+  - Main navigation buttons: "Writing Samples" (left of History), "History"
+  - Current page button is disabled for visual feedback
+  - User dropdown menu (avatar + name) contains only "Log out" option
+  - Theme toggle available on all pages for dark/light mode switching
 
 - **Hooks**:
   - `useAuth.ts` - Authentication hook for checking login status and user info

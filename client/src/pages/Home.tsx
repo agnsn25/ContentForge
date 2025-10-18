@@ -143,6 +143,18 @@ export default function Home() {
           </div>
           
           <div className="flex items-center gap-4">
+            {user && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => window.location.href = '/writing-samples'}
+                data-testid="button-writing-samples-nav"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Writing Samples
+              </Button>
+            )}
+            
             <Button
               variant="ghost"
               size="sm"
@@ -173,13 +185,6 @@ export default function Home() {
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel data-testid="text-user-email">{user.email}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem 
-                    onClick={() => window.location.href = '/writing-samples'}
-                    data-testid="button-writing-samples-nav"
-                  >
-                    <FileText className="mr-2 h-4 w-4" />
-                    <span>Writing Samples</span>
-                  </DropdownMenuItem>
                   <DropdownMenuItem 
                     onClick={() => window.location.href = '/api/logout'}
                     data-testid="button-logout"
