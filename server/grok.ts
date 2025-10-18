@@ -1,6 +1,6 @@
 // xAI Grok integration for content transformation
 import OpenAI from "openai";
-import type { TargetFormat } from "@shared/schema";
+import type { TargetFormat, WritingSample } from "@shared/schema";
 
 const openai = new OpenAI({ 
   baseURL: "https://api.x.ai/v1", 
@@ -10,7 +10,8 @@ const openai = new OpenAI({
 export async function transformContent(
   transcript: string,
   targetFormat: TargetFormat,
-  sourceInfo: string
+  sourceInfo: string,
+  writingSamples?: WritingSample[]
 ): Promise<string> {
   const systemPrompts: Record<TargetFormat, string> = {
     newsletter: `Transform this transcript into a newsletter format (400-600 words).
@@ -136,12 +137,36 @@ Return ONLY a valid JSON object with this structure:
   };
 
   try {
+    // Build the system prompt with style matching if writing samples are provided
+    let systemPrompt = systemPrompts[targetFormat];
+    
+    if (writingSamples && writingSamples.length > 0) {
+      const styleAnalysisSection = `\n\nSTYLE MATCHING INSTRUCTIONS:
+The user has provided ${writingSamples.length} writing sample(s) to match their personal style. Carefully analyze these samples for:
+- Tone and voice (formal/casual, serious/playful, professional/conversational)
+- Sentence structure (short/long, simple/complex, varied/consistent)
+- Vocabulary choices (technical/accessible, jargon/plain language)
+- Paragraph length and pacing
+- Use of rhetorical devices (questions, lists, metaphors, etc.)
+- Punctuation patterns and emphasis techniques
+
+Writing Sample(s):
+${writingSamples.map((sample, idx) => `
+Sample ${idx + 1}: "${sample.title}" (${sample.wordCount} words)
+${sample.content}
+`).join('\n---\n')}
+
+IMPORTANT: Transform the transcript content while MIMICKING THE WRITING STYLE from the samples above. The content should be about the transcript, but written as if the user from the samples wrote it themselves.`;
+      
+      systemPrompt += styleAnalysisSection;
+    }
+
     const response = await openai.chat.completions.create({
       model: "grok-2-1212",
       messages: [
         {
           role: "system",
-          content: systemPrompts[targetFormat]
+          content: systemPrompt
         },
         {
           role: "user",
