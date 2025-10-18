@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import Landing from "@/pages/Landing";
 import Home from "@/pages/Home";
 import History from "@/pages/History";
+import WritingSamples from "@/pages/WritingSamples";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -32,6 +33,7 @@ function Router() {
         <>
           <Route path="/" component={Home} />
           <Route path="/history" component={History} />
+          <Route path="/writing-samples" component={WritingSamples} />
         </>
       )}
       <Route component={NotFound} />

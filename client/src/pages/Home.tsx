@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
-import { Sparkles, LogOut, History as HistoryIcon } from 'lucide-react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { Sparkles, LogOut, History as HistoryIcon, FileText } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import UploadZone from '@/components/UploadZone';
 import FormatSelector from '@/components/FormatSelector';
@@ -9,6 +9,8 @@ import ContentPreview from '@/components/ContentPreview';
 import ThemeToggle from '@/components/ThemeToggle';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -19,7 +21,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { apiRequest } from '@/lib/queryClient';
-import type { TargetFormat, TransformedContent, JobStatus } from '@shared/schema';
+import type { TargetFormat, TransformedContent, JobStatus, WritingSample } from '@shared/schema';
 import logoUrl from "@assets/Gemini_Generated_Image_sde2j4sde2j4sde2_1760736424242.png";
 
 export default function Home() {
@@ -29,9 +31,15 @@ export default function Home() {
   const [transformedContent, setTransformedContent] = useState<TransformedContent | null>(null);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [useStyleMatching, setUseStyleMatching] = useState(false);
+
+  const { data: writingSamples = [] } = useQuery<WritingSample[]>({
+    queryKey: ['/api/writing-samples'],
+    enabled: !!user,
+  });
 
   const uploadMutation = useMutation({
-    mutationFn: async (data: { file?: File; url?: string; type?: 'youtube' | 'spotify'; format: TargetFormat }) => {
+    mutationFn: async (data: { file?: File; url?: string; type?: 'youtube' | 'spotify'; format: TargetFormat; useStyleMatching?: boolean }) => {
       const formData = new FormData();
       
       if (data.file) {
@@ -43,6 +51,9 @@ export default function Home() {
       }
       
       formData.append('targetFormat', data.format);
+      if (data.useStyleMatching) {
+        formData.append('useStyleMatching', 'true');
+      }
 
       const response = await fetch('/api/transform', {
         method: 'POST',
@@ -100,7 +111,7 @@ export default function Home() {
     }
     
     setError(null);
-    uploadMutation.mutate({ file, format: selectedFormat });
+    uploadMutation.mutate({ file, format: selectedFormat, useStyleMatching });
   };
 
   const handleLinkSubmit = (url: string, type: 'youtube' | 'spotify') => {
@@ -110,7 +121,7 @@ export default function Home() {
     }
     
     setError(null);
-    uploadMutation.mutate({ url, type, format: selectedFormat });
+    uploadMutation.mutate({ url, type, format: selectedFormat, useStyleMatching });
   };
 
   const handleReset = () => {
@@ -119,6 +130,7 @@ export default function Home() {
     setTransformedContent(null);
     setProgress(0);
     setError(null);
+    setUseStyleMatching(false);
   };
 
   return (
@@ -162,6 +174,13 @@ export default function Home() {
                   <DropdownMenuLabel data-testid="text-user-email">{user.email}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
+                    onClick={() => window.location.href = '/writing-samples'}
+                    data-testid="button-writing-samples-nav"
+                  >
+                    <FileText className="mr-2 h-4 w-4" />
+                    <span>Writing Samples</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
                     onClick={() => window.location.href = '/api/logout'}
                     data-testid="button-logout"
                   >
@@ -197,6 +216,30 @@ export default function Home() {
                 
                 {selectedFormat && (
                   <>
+                    {user && writingSamples.length > 0 && (
+                      <>
+                        <div className="h-px bg-border" />
+                        <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-lg">
+                          <Checkbox 
+                            id="style-matching"
+                            checked={useStyleMatching}
+                            onCheckedChange={(checked) => setUseStyleMatching(checked === true)}
+                            data-testid="checkbox-style-matching"
+                          />
+                          <div className="flex-1">
+                            <Label 
+                              htmlFor="style-matching" 
+                              className="text-sm font-medium cursor-pointer"
+                            >
+                              Use my writing style
+                            </Label>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Apply your personal writing style from {writingSamples.length} sample{writingSamples.length > 1 ? 's' : ''}
+                            </p>
+                          </div>
+                        </div>
+                      </>
+                    )}
                     <div className="h-px bg-border" />
                     <UploadZone 
                       onFileSelect={handleFileSelect}
