@@ -39,6 +39,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch content history" });
     }
   });
+
+  // Writing samples routes
+  app.get('/api/writing-samples', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const samples = await storage.getUserWritingSamples(userId);
+      res.json(samples);
+    } catch (error) {
+      console.error("Error fetching writing samples:", error);
+      res.status(500).json({ message: "Failed to fetch writing samples" });
+    }
+  });
+
+  app.post('/api/writing-samples', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { title, content } = req.body;
+
+      if (!title || !content) {
+        return res.status(400).json({ error: 'Title and content are required' });
+      }
+
+      // Count words and enforce max 800 words
+      const wordCount = content.trim().split(/\s+/).length;
+      if (wordCount > 800) {
+        return res.status(400).json({ error: 'Content exceeds 800 word limit' });
+      }
+
+      // Check if user already has 2 samples
+      const existingSamples = await storage.getUserWritingSamples(userId);
+      if (existingSamples.length >= 2) {
+        return res.status(400).json({ error: 'Maximum 2 writing samples allowed. Please delete one first.' });
+      }
+
+      const sample = await storage.createWritingSample({
+        userId,
+        title,
+        content,
+        wordCount: wordCount.toString(),
+      });
+
+      res.json(sample);
+    } catch (error) {
+      console.error("Error creating writing sample:", error);
+      res.status(500).json({ message: "Failed to create writing sample" });
+    }
+  });
+
+  app.delete('/api/writing-samples/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      await storage.deleteWritingSample(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting writing sample:", error);
+      res.status(500).json({ message: "Failed to delete writing sample" });
+    }
+  });
   
   // Transform content endpoint (works for both authenticated and guest users)
   app.post('/api/transform', upload.single('file'), async (req: any, res) => {
