@@ -3,8 +3,11 @@ import {
   type InsertContentJob,
   type User,
   type UpsertUser,
+  type WritingSample,
+  type InsertWritingSample,
   contentJobs,
-  users
+  users,
+  writingSamples
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
@@ -20,6 +23,11 @@ export interface IStorage {
   getContentJob(id: string): Promise<ContentJob | undefined>;
   updateContentJob(id: string, updates: Partial<ContentJob>): Promise<ContentJob>;
   getUserContentJobs(userId: string): Promise<ContentJob[]>;
+  
+  // Writing sample operations
+  createWritingSample(sample: InsertWritingSample): Promise<WritingSample>;
+  getUserWritingSamples(userId: string): Promise<WritingSample[]>;
+  deleteWritingSample(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -85,6 +93,33 @@ export class DatabaseStorage implements IStorage {
       .from(contentJobs)
       .where(eq(contentJobs.userId, userId))
       .orderBy(desc(contentJobs.createdAt));
+  }
+
+  // Writing sample operations
+  async createWritingSample(insertSample: InsertWritingSample): Promise<WritingSample> {
+    const id = randomUUID();
+    const [sample] = await db
+      .insert(writingSamples)
+      .values({
+        id,
+        ...insertSample,
+      })
+      .returning();
+    return sample;
+  }
+
+  async getUserWritingSamples(userId: string): Promise<WritingSample[]> {
+    return await db
+      .select()
+      .from(writingSamples)
+      .where(eq(writingSamples.userId, userId))
+      .orderBy(desc(writingSamples.createdAt));
+  }
+
+  async deleteWritingSample(id: string): Promise<void> {
+    await db
+      .delete(writingSamples)
+      .where(eq(writingSamples.id, id));
   }
 }
 
