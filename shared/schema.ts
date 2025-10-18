@@ -39,6 +39,15 @@ export const contentJobs = pgTable("content_jobs", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const writingSamples = pgTable("writing_samples", {
+  id: varchar("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  title: varchar("title").notNull(),
+  content: text("content").notNull(),
+  wordCount: text("word_count").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const insertContentJobSchema = createInsertSchema(contentJobs).omit({
   id: true,
   createdAt: true,
@@ -46,6 +55,14 @@ export const insertContentJobSchema = createInsertSchema(contentJobs).omit({
 
 export type InsertContentJob = z.infer<typeof insertContentJobSchema>;
 export type ContentJob = typeof contentJobs.$inferSelect;
+
+export const insertWritingSampleSchema = createInsertSchema(writingSamples).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertWritingSample = z.infer<typeof insertWritingSampleSchema>;
+export type WritingSample = typeof writingSamples.$inferSelect;
 
 // User types
 export type UpsertUser = typeof users.$inferInsert;
