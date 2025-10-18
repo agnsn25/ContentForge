@@ -9,12 +9,34 @@ ContentHammer is an AI-powered web application that transforms long-form content
 - PostgreSQL database for persistent storage
 - Content history and saved transformations
 - Fully functional content transformation pipeline
+- **Writing Style Matching** - Upload 1-2 writing samples (max 800 words each) and AI mimics your style
 - Beautiful, responsive UI with dark mode support
 - YouTube transcript extraction (using @danielxceron/youtube-transcript)
 - Spotify link metadata support
 - File upload for audio, video, and text files
 - Real-time AI processing with progress indicators
 - Export functionality (copy/download as Markdown)
+
+## Recent Changes (October 18, 2025)
+
+### Writing Style Matching Feature (Latest)
+- **Writing Samples Management**: New `/writing-samples` page where users can add, view, and delete writing samples
+  - Upload up to 2 writing samples (max 800 words each)
+  - Real-time word count validation
+  - Sample preview and management UI
+- **AI Style Matching**: Enhanced Grok AI prompts to analyze and mimic user's writing style
+  - Analyzes tone, sentence structure, vocabulary, paragraph pacing
+  - Applies detected style to transformed content
+  - Optional toggle on home page (only visible when user has samples)
+- **Database Schema**: Added `writingSamples` table with user relationship
+- **API Endpoints**: 
+  - GET /api/writing-samples (list user's samples)
+  - POST /api/writing-samples (create sample with validation)
+  - DELETE /api/writing-samples/:id (remove sample)
+- **UI Updates**:
+  - Added "Writing Samples" link in user dropdown menu
+  - Style matching checkbox on home page (appears when samples exist)
+  - Clean, intuitive sample management interface
 
 ## Recent Changes (October 17, 2025)
 
@@ -67,6 +89,7 @@ ContentHammer is an AI-powered web application that transforms long-form content
   - `Landing.tsx` - Marketing page for logged-out users with feature showcase
   - `Home.tsx` - Main application page with user dropdown and content transformation
   - `History.tsx` - View all saved transformations with filtering and search
+  - `WritingSamples.tsx` - Manage writing samples for style matching (max 2 samples, 800 words each)
 
 - **Hooks**:
   - `useAuth.ts` - Authentication hook for checking login status and user info
@@ -84,7 +107,10 @@ ContentHammer is an AI-powered web application that transforms long-form content
   - `GET /api/callback` - OAuth callback handler
   - `GET /api/auth/user` - Get current user info (protected)
   - `GET /api/content/history` - Get user's transformation history (protected)
-  - `POST /api/transform` - Upload file or submit link, start transformation (works for guests too)
+  - `GET /api/writing-samples` - Get user's writing samples (protected)
+  - `POST /api/writing-samples` - Create writing sample with validation (protected)
+  - `DELETE /api/writing-samples/:id` - Delete writing sample (protected)
+  - `POST /api/transform` - Upload file or submit link, start transformation with optional style matching
   - `GET /api/job/:id` - Poll job status and retrieve results
 
 - **Services**:
@@ -97,6 +123,7 @@ ContentHammer is an AI-powered web application that transforms long-form content
 - **AI Integration**:
   - Uses xAI Grok API (grok-2-1212 model) with 131K token context
   - Format-specific system prompts for Newsletter, Social Tutorial, Blog Post, and X Thread
+  - **Style Matching**: Analyzes user writing samples for tone, structure, vocabulary, and applies to output
   - Unique JSON-structured responses tailored to each format
   - Word count requirements: 400-600 for newsletter, 800-1200 for blog
   - Character limits: 280 chars per tweet, per slide for social
@@ -133,6 +160,16 @@ ContentJob {
   transformedContent?: string
   status: 'processing' | 'completed' | 'error'
   error?: string
+  createdAt: Date
+}
+
+// Writing samples (for style matching)
+WritingSample {
+  id: string (varchar, primary key)
+  userId: string (foreign key to users, required)
+  title: string
+  content: string (text)
+  wordCount: string
   createdAt: Date
 }
 
