@@ -100,7 +100,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Transform content endpoint (works for both authenticated and guest users)
   app.post('/api/transform', upload.single('file'), async (req: any, res) => {
     try {
-      const { sourceType, targetFormat, url } = req.body;
+      const { sourceType, targetFormat, url, useStyleMatching } = req.body;
       const file = req.file;
 
       if (!targetFormat || !['newsletter', 'social', 'blog', 'x'].includes(targetFormat)) {
@@ -137,6 +137,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get userId if user is authenticated
       const userId = req.isAuthenticated() ? req.user.claims.sub : null;
 
+      // Get writing samples if style matching is enabled and user is authenticated
+      let writingSamples = undefined;
+      if (useStyleMatching === 'true' && userId) {
+        writingSamples = await storage.getUserWritingSamples(userId);
+      }
+
       // Create job in storage
       const job = await storage.createContentJob({
         userId,
@@ -151,7 +157,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Start async transformation (don't await)
-      processTransformation(job.id, transcript, targetFormat as TargetFormat, sourceInfo)
+      processTransformation(job.id, transcript, targetFormat as TargetFormat, sourceInfo, writingSamples)
         .catch(err => console.error('Transformation error:', err));
 
       res.json({ jobId: job.id, status: 'processing' });
@@ -189,12 +195,16 @@ async function processTransformation(
   jobId: string, 
   transcript: string, 
   targetFormat: TargetFormat,
-  sourceInfo: string
+  sourceInfo: string,
+  writingSamples?: any[]
 ) {
   try {
     console.log('Processing transformation for job:', jobId);
     console.log('Transcript length being sent to Grok:', transcript.length);
-    const transformedContent = await transformContent(transcript, targetFormat, sourceInfo);
+    if (writingSamples && writingSamples.length > 0) {
+      console.log('Using style matching with', writingSamples.length, 'writing sample(s)');
+    }
+    const transformedContent = await transformContent(transcript, targetFormat, sourceInfo, writingSamples);
     
     await storage.updateContentJob(jobId, {
       transformedContent,
