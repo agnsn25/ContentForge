@@ -129,16 +129,6 @@ export default function History() {
                 Writing Samples
               </Button>
             )}
-
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled
-              data-testid="button-history-nav"
-            >
-              <HistoryIcon className="h-4 w-4 mr-2" />
-              History
-            </Button>
             
             <ThemeToggle />
             
