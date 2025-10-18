@@ -37,7 +37,7 @@ ContentHammer is an AI-powered web application that transforms long-form content
   - "Writing Samples" moved to main navigation bar (positioned left of "History")
   - Removed "Writing Samples" from user dropdown menu (now only contains "Log out")
   - All pages (Home, History, WritingSamples) have consistent navigation headers
-  - Current page button is disabled for visual indication
+  - Current page button is hidden (not shown) for cleaner UI
   - Full dark/light mode support across all pages
 - **UI Updates**:
   - Style matching checkbox on home page (appears when samples exist)
@@ -100,7 +100,7 @@ ContentHammer is an AI-powered web application that transforms long-form content
 - **Navigation**:
   - Consistent navigation header across all pages (Home, History, WritingSamples)
   - Main navigation buttons: "Writing Samples" (left of History), "History"
-  - Current page button is disabled for visual feedback
+  - Current page button is hidden for cleaner UI (not shown when on that page)
   - User dropdown menu (avatar + name) contains only "Log out" option
   - Theme toggle available on all pages for dark/light mode switching
 
