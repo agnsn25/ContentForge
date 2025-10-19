@@ -3,11 +3,9 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
-import { Input } from "@/components/ui/input";
-import { Loader2, ChevronRight, ChevronLeft, Sparkles, CheckCircle2, Edit3 } from "lucide-react";
+import { Loader2, ChevronRight, ChevronLeft, Sparkles, CheckCircle2 } from "lucide-react";
 import type { Step1Analysis, Step2Recommendation, Step3TitleOption, Step4Content, Step5Schedule, TargetFormat } from "@shared/schema";
 
 interface StrategyWizardProps {
@@ -23,7 +21,6 @@ export default function StrategyWizard({ strategyId, onComplete }: StrategyWizar
   const [step4Data, setStep4Data] = useState<Step4Content[]>([]);
   const [step5Data, setStep5Data] = useState<Step5Schedule[]>([]);
   
-  const [isEditingStep1, setIsEditingStep1] = useState(false);
   const [selectedFormats, setSelectedFormats] = useState<TargetFormat[]>([]);
   const [selectedTitles, setSelectedTitles] = useState<{ format: TargetFormat; title: string }[]>([]);
 
@@ -161,10 +158,10 @@ export default function StrategyWizard({ strategyId, onComplete }: StrategyWizar
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-primary" />
-              Step 1: Content Analysis
+              Step 1: Content Characteristics
             </CardTitle>
             <CardDescription>
-              AI will analyze your transcript to identify the topic, audience, goals, and key takeaways
+              Review the AI analysis of your source material's topic, audience, tone, and key insights
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -189,53 +186,25 @@ export default function StrategyWizard({ strategyId, onComplete }: StrategyWizar
               </Button>
             ) : (
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400">
-                    <CheckCircle2 className="w-4 h-4" />
-                    Analysis Complete
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setIsEditingStep1(!isEditingStep1)}
-                    data-testid="button-edit-step1"
-                  >
-                    <Edit3 className="w-3 h-3" />
-                    {isEditingStep1 ? 'Done Editing' : 'Edit'}
-                  </Button>
+                <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400">
+                  <CheckCircle2 className="w-4 h-4" />
+                  Analysis Complete
                 </div>
 
-                <div className="space-y-3">
+                <div className="bg-muted/30 rounded-lg p-4 space-y-4">
                   <div>
                     <label className="text-sm font-medium text-foreground">Topic</label>
-                    {isEditingStep1 ? (
-                      <Input
-                        value={step1Data.topic}
-                        onChange={(e) => setStep1Data({ ...step1Data, topic: e.target.value })}
-                        data-testid="input-topic"
-                      />
-                    ) : (
-                      <p className="text-sm text-muted-foreground" data-testid="text-topic">{step1Data.topic}</p>
-                    )}
+                    <p className="text-sm text-muted-foreground mt-1" data-testid="text-topic">{step1Data.topic}</p>
                   </div>
 
                   <div>
                     <label className="text-sm font-medium text-foreground">Target Audience</label>
-                    {isEditingStep1 ? (
-                      <Textarea
-                        value={step1Data.targetAudience}
-                        onChange={(e) => setStep1Data({ ...step1Data, targetAudience: e.target.value })}
-                        rows={2}
-                        data-testid="input-audience"
-                      />
-                    ) : (
-                      <p className="text-sm text-muted-foreground" data-testid="text-audience">{step1Data.targetAudience}</p>
-                    )}
+                    <p className="text-sm text-muted-foreground mt-1" data-testid="text-audience">{step1Data.targetAudience}</p>
                   </div>
 
                   <div>
                     <label className="text-sm font-medium text-foreground">Primary Goals</label>
-                    <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1" data-testid="list-goals">
+                    <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 mt-1" data-testid="list-goals">
                       {step1Data.primaryGoals.map((goal, i) => (
                         <li key={i}>{goal}</li>
                       ))}
@@ -244,20 +213,12 @@ export default function StrategyWizard({ strategyId, onComplete }: StrategyWizar
 
                   <div>
                     <label className="text-sm font-medium text-foreground">Tone</label>
-                    {isEditingStep1 ? (
-                      <Input
-                        value={step1Data.tone}
-                        onChange={(e) => setStep1Data({ ...step1Data, tone: e.target.value })}
-                        data-testid="input-tone"
-                      />
-                    ) : (
-                      <p className="text-sm text-muted-foreground" data-testid="text-tone">{step1Data.tone}</p>
-                    )}
+                    <p className="text-sm text-muted-foreground mt-1" data-testid="text-tone">{step1Data.tone}</p>
                   </div>
 
                   <div>
                     <label className="text-sm font-medium text-foreground">Key Takeaways</label>
-                    <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1" data-testid="list-takeaways">
+                    <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 mt-1" data-testid="list-takeaways">
                       {step1Data.keyTakeaways.map((takeaway, i) => (
                         <li key={i}>{takeaway}</li>
                       ))}
