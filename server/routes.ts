@@ -191,7 +191,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Strategy Generator Routes
   app.post('/api/strategy/start', upload.single('file'), async (req: any, res) => {
     try {
-      const { sourceType, url } = req.body;
+      const { sourceType, url, useStyleMatching } = req.body;
       const file = req.file;
       const userId = req.user?.claims?.sub || null;
 
@@ -220,6 +220,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         sourceUrl,
         fileName,
         transcript,
+        useStyleMatching: useStyleMatching === 'true' ? 'true' : 'false',
         currentStep: '1',
         step1Output: null,
         step2Output: null,
@@ -325,7 +326,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const selectedFormats = JSON.parse(job.selectedFormats || '[]');
       const sourceInfo = job.fileName || job.sourceUrl || 'Unknown source';
       
-      const result = await executeStep4(job.transcript, sourceInfo, selectedFormats, selectedTitles);
+      // Get writing samples if style matching is enabled
+      let writingSamples = undefined;
+      if (job.useStyleMatching === 'true' && job.userId) {
+        writingSamples = await storage.getUserWritingSamples(job.userId);
+      }
+      
+      const result = await executeStep4(job.transcript, sourceInfo, selectedFormats, selectedTitles, writingSamples);
 
       await storage.updateStrategyJob(job.id, {
         step4Output: JSON.stringify(result),

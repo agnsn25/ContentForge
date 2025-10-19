@@ -135,7 +135,8 @@ export async function executeStep4(
   transcript: string,
   sourceInfo: string,
   selectedFormats: TargetFormat[],
-  selectedTitles: { format: TargetFormat; title: string }[]
+  selectedTitles: { format: TargetFormat; title: string }[],
+  writingSamples?: any[]
 ): Promise<Step4Content[]> {
   const results: Step4Content[] = [];
   
@@ -145,7 +146,8 @@ export async function executeStep4(
     const transformedContent = await transformContent(
       transcript,
       format,
-      sourceInfo
+      sourceInfo,
+      writingSamples
     );
     
     const content = JSON.parse(transformedContent);
