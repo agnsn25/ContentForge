@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Sparkles, LogOut, History as HistoryIcon, FileText, Zap, Map } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -50,6 +50,33 @@ export default function Home() {
     enabled: !!strategyId && !completedStrategy,
     refetchInterval: false,
   });
+
+  // Handle jobId query parameter from History page
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const jobId = params.get('jobId');
+    
+    if (jobId) {
+      const fetchJob = async () => {
+        try {
+          const response = await apiRequest('GET', `/api/job/${jobId}`);
+          const result = await response.json();
+          
+          if (result.status === 'completed' && result.transformedContent) {
+            setSelectedFormat(result.targetFormat as TargetFormat);
+            setTransformedContent(JSON.parse(result.transformedContent));
+            setJobStatus('completed');
+            // Clear the query parameter
+            window.history.replaceState({}, '', '/');
+          }
+        } catch (err) {
+          setError('Failed to load content');
+        }
+      };
+      
+      fetchJob();
+    }
+  }, []);
 
   const uploadMutation = useMutation({
     mutationFn: async (data: { file?: File; url?: string; type?: 'youtube' | 'spotify'; format: TargetFormat; useStyleMatching?: boolean }) => {
