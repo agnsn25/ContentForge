@@ -1,16 +1,19 @@
 import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Sparkles, LogOut, History as HistoryIcon, FileText } from 'lucide-react';
+import { Sparkles, LogOut, History as HistoryIcon, FileText, Zap, Map } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import UploadZone from '@/components/UploadZone';
 import FormatSelector from '@/components/FormatSelector';
 import ProcessingIndicator from '@/components/ProcessingIndicator';
 import ContentPreview from '@/components/ContentPreview';
+import StrategyWizard from '@/components/StrategyWizard';
+import StrategyPreview from '@/components/StrategyPreview';
 import ThemeToggle from '@/components/ThemeToggle';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -21,21 +24,31 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { apiRequest } from '@/lib/queryClient';
-import type { TargetFormat, TransformedContent, JobStatus, WritingSample } from '@shared/schema';
+import type { TargetFormat, TransformedContent, JobStatus, WritingSample, StrategyJob } from '@shared/schema';
 import logoUrl from "@assets/hammer-logo.png";
 
 export default function Home() {
   const { user } = useAuth();
+  const [mode, setMode] = useState<'quick' | 'strategy'>('quick');
   const [selectedFormat, setSelectedFormat] = useState<TargetFormat | null>(null);
   const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
   const [transformedContent, setTransformedContent] = useState<TransformedContent | null>(null);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [useStyleMatching, setUseStyleMatching] = useState(false);
+  
+  const [strategyId, setStrategyId] = useState<string | null>(null);
+  const [completedStrategy, setCompletedStrategy] = useState<StrategyJob | null>(null);
 
   const { data: writingSamples = [] } = useQuery<WritingSample[]>({
     queryKey: ['/api/writing-samples'],
     enabled: !!user,
+  });
+
+  const { data: currentStrategy } = useQuery<StrategyJob>({
+    queryKey: ['/api/strategy', strategyId],
+    enabled: !!strategyId && !completedStrategy,
+    refetchInterval: false,
   });
 
   const uploadMutation = useMutation({
@@ -124,6 +137,56 @@ export default function Home() {
     uploadMutation.mutate({ url, type, format: selectedFormat, useStyleMatching });
   };
 
+  const strategyMutation = useMutation({
+    mutationFn: async (data: { file?: File; url?: string; type?: 'youtube' | 'spotify' }) => {
+      const formData = new FormData();
+      
+      if (data.file) {
+        formData.append('file', data.file);
+        formData.append('sourceType', 'file');
+      } else if (data.url) {
+        formData.append('url', data.url);
+        formData.append('sourceType', data.type || 'youtube');
+      }
+
+      const response = await fetch('/api/strategy/start', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to start strategy');
+      }
+
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setStrategyId(data.strategyId);
+    },
+    onError: (err) => {
+      setError(err.message);
+    },
+  });
+
+  const handleFileSelectStrategy = (file: File) => {
+    setError(null);
+    strategyMutation.mutate({ file });
+  };
+
+  const handleLinkSubmitStrategy = (url: string, type: 'youtube' | 'spotify') => {
+    setError(null);
+    strategyMutation.mutate({ url, type });
+  };
+
+  const handleStrategyComplete = async () => {
+    if (strategyId) {
+      const response = await apiRequest('GET', `/api/strategy/${strategyId}`);
+      const strategy = await response.json();
+      setCompletedStrategy(strategy);
+    }
+  };
+
   const handleReset = () => {
     setSelectedFormat(null);
     setJobStatus(null);
@@ -131,6 +194,8 @@ export default function Home() {
     setProgress(0);
     setError(null);
     setUseStyleMatching(false);
+    setStrategyId(null);
+    setCompletedStrategy(null);
   };
 
   return (
@@ -200,7 +265,17 @@ export default function Home() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {!jobStatus ? (
+        {completedStrategy ? (
+          <StrategyPreview 
+            strategy={completedStrategy}
+            onStartNew={handleReset}
+          />
+        ) : strategyId ? (
+          <StrategyWizard 
+            strategyId={strategyId}
+            onComplete={handleStrategyComplete}
+          />
+        ) : !jobStatus ? (
           <div className="space-y-12">
             <div className="text-center space-y-4 max-w-3xl mx-auto">
               <h2 className="text-4xl font-bold text-foreground">
@@ -212,47 +287,120 @@ export default function Home() {
               </p>
             </div>
 
+            <div className="flex justify-center mb-8">
+              <Tabs value={mode} onValueChange={(v) => setMode(v as 'quick' | 'strategy')} className="w-full max-w-md">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="quick" data-testid="tab-quick">
+                    <Zap className="w-4 h-4 mr-2" />
+                    Quick Transform
+                  </TabsTrigger>
+                  <TabsTrigger value="strategy" data-testid="tab-strategy">
+                    <Map className="w-4 h-4 mr-2" />
+                    Strategy Generator
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+
             <Card className="p-8 max-w-4xl mx-auto">
-              <div className="space-y-8">
-                <FormatSelector 
-                  selectedFormat={selectedFormat} 
-                  onSelectFormat={setSelectedFormat}
-                />
-                
-                {selectedFormat && (
-                  <>
-                    {user && writingSamples.length > 0 && (
-                      <>
-                        <div className="h-px bg-border" />
-                        <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-lg">
-                          <Checkbox 
-                            id="style-matching"
-                            checked={useStyleMatching}
-                            onCheckedChange={(checked) => setUseStyleMatching(checked === true)}
-                            data-testid="checkbox-style-matching"
-                          />
-                          <div className="flex-1">
-                            <Label 
-                              htmlFor="style-matching" 
-                              className="text-sm font-medium cursor-pointer"
-                            >
-                              Use my writing style
-                            </Label>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Apply your personal writing style from {writingSamples.length} sample{writingSamples.length > 1 ? 's' : ''}
-                            </p>
+              {mode === 'quick' ? (
+                <div className="space-y-8">
+                  <div className="text-center space-y-2">
+                    <h3 className="text-lg font-semibold text-foreground">Quick Transform</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Choose one format and get instant results
+                    </p>
+                  </div>
+
+                  <FormatSelector 
+                    selectedFormat={selectedFormat} 
+                    onSelectFormat={setSelectedFormat}
+                  />
+                  
+                  {selectedFormat && (
+                    <>
+                      {user && writingSamples.length > 0 && (
+                        <>
+                          <div className="h-px bg-border" />
+                          <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-lg">
+                            <Checkbox 
+                              id="style-matching"
+                              checked={useStyleMatching}
+                              onCheckedChange={(checked) => setUseStyleMatching(checked === true)}
+                              data-testid="checkbox-style-matching"
+                            />
+                            <div className="flex-1">
+                              <Label 
+                                htmlFor="style-matching" 
+                                className="text-sm font-medium cursor-pointer"
+                              >
+                                Use my writing style
+                              </Label>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Apply your personal writing style from {writingSamples.length} sample{writingSamples.length > 1 ? 's' : ''}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                      </>
-                    )}
-                    <div className="h-px bg-border" />
-                    <UploadZone 
-                      onFileSelect={handleFileSelect}
-                      onLinkSubmit={handleLinkSubmit}
-                    />
-                  </>
-                )}
-              </div>
+                        </>
+                      )}
+                      <div className="h-px bg-border" />
+                      <UploadZone 
+                        onFileSelect={handleFileSelect}
+                        onLinkSubmit={handleLinkSubmit}
+                      />
+                    </>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-8">
+                  <div className="text-center space-y-2">
+                    <h3 className="text-lg font-semibold text-foreground flex items-center justify-center gap-2">
+                      <Sparkles className="w-5 h-5 text-primary" />
+                      Multi-Step Strategy Generator
+                    </h3>
+                    <p className="text-sm text-muted-foreground max-w-2xl mx-auto">
+                      Get a complete content marketing plan with AI-guided analysis, format recommendations, 
+                      title options, full content generation, and a publishing calendar
+                    </p>
+                  </div>
+
+                  <div className="grid md:grid-cols-5 gap-4 text-center">
+                    <div className="space-y-1">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 text-primary font-semibold flex items-center justify-center mx-auto">1</div>
+                      <p className="text-xs text-muted-foreground">Analyze Content</p>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 text-primary font-semibold flex items-center justify-center mx-auto">2</div>
+                      <p className="text-xs text-muted-foreground">Pick Formats</p>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 text-primary font-semibold flex items-center justify-center mx-auto">3</div>
+                      <p className="text-xs text-muted-foreground">Choose Titles</p>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 text-primary font-semibold flex items-center justify-center mx-auto">4</div>
+                      <p className="text-xs text-muted-foreground">Generate All</p>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 text-primary font-semibold flex items-center justify-center mx-auto">5</div>
+                      <p className="text-xs text-muted-foreground">Get Schedule</p>
+                    </div>
+                  </div>
+
+                  <div className="h-px bg-border" />
+
+                  <UploadZone 
+                    onFileSelect={handleFileSelectStrategy}
+                    onLinkSubmit={handleLinkSubmitStrategy}
+                  />
+
+                  {error && (
+                    <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+                      <p className="text-sm text-destructive">{error}</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </Card>
           </div>
         ) : (
