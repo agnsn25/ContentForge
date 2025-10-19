@@ -69,8 +69,39 @@ export default function StrategyPreview({ strategy, onStartNew }: StrategyPrevie
   };
 
   const handleDownload = () => {
-    const content = `# Content Strategy\n\nGenerated on ${new Date(strategy.createdAt).toLocaleDateString()}\n\n`;
-    const blob = new Blob([content], { type: 'text/markdown' });
+    let allContent = `# Content Strategy\n\nGenerated on ${new Date(strategy.createdAt).toLocaleDateString()}\n\n`;
+    
+    if (step1Data) {
+      allContent += `## Analysis\n\n`;
+      allContent += `**Topic:** ${step1Data.topic}\n\n`;
+      allContent += `**Target Audience:** ${step1Data.targetAudience}\n\n`;
+      allContent += `**Tone:** ${step1Data.tone}\n\n\n`;
+    }
+
+    step4Data.forEach((content) => {
+      const contentData = content.content as any;
+      allContent += `## ${getFormatLabel(content.format)}\n\n`;
+      allContent += `**Title:** ${contentData.title || contentData.hook || 'Untitled'}\n\n`;
+      allContent += JSON.stringify(contentData, null, 2);
+      allContent += '\n\n---\n\n';
+    });
+
+    if (step5Data.length > 0) {
+      allContent += `## Publishing Schedule\n\n`;
+      step5Data.forEach((schedule) => {
+        allContent += `### ${getFormatLabel(schedule.contentPiece.format)}\n`;
+        allContent += `- **Date:** ${schedule.publishDate}\n`;
+        allContent += `- **Time:** ${schedule.publishTime}\n`;
+        allContent += `- **Platform:** ${schedule.platform}\n`;
+        allContent += `- **Promotion:**\n`;
+        schedule.promotionStrategy.forEach(tactic => {
+          allContent += `  - ${tactic}\n`;
+        });
+        allContent += '\n';
+      });
+    }
+
+    const blob = new Blob([allContent], { type: 'text/markdown' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
