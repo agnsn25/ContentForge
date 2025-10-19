@@ -4,6 +4,7 @@ import multer from "multer";
 import { storage } from "./storage";
 import { transformContent } from "./grok";
 import { getYoutubeTranscript, getSpotifyTranscript, extractTextFromFile } from "./transcript";
+import { executeStep1, executeStep2, executeStep3, executeStep4, executeStep5 } from "./strategy";
 import type { TargetFormat } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 
@@ -184,6 +185,211 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         error: error instanceof Error ? error.message : 'Failed to fetch job status' 
       });
+    }
+  });
+
+  // Strategy Generator Routes
+  app.post('/api/strategy/start', upload.single('file'), async (req: any, res) => {
+    try {
+      const { sourceType, url } = req.body;
+      const file = req.file;
+      const userId = req.user?.claims?.sub || null;
+
+      let transcript = '';
+      let sourceUrl = '';
+      let fileName = '';
+
+      if (sourceType === 'file' && file) {
+        transcript = await extractTextFromFile(file);
+        fileName = file.originalname;
+      } else if (sourceType === 'youtube' && url) {
+        const result = await getYoutubeTranscript(url);
+        transcript = result.transcript;
+        sourceUrl = url;
+      } else if (sourceType === 'spotify' && url) {
+        const result = await getSpotifyTranscript(url);
+        transcript = result.transcript;
+        sourceUrl = url;
+      } else {
+        return res.status(400).json({ error: 'Invalid source type or missing data' });
+      }
+
+      const job = await storage.createStrategyJob({
+        userId,
+        sourceType,
+        sourceUrl,
+        fileName,
+        transcript,
+        currentStep: '1',
+        step1Output: null,
+        step2Output: null,
+        step3Output: null,
+        step4Output: null,
+        step5Output: null,
+        selectedFormats: null,
+        status: 'in_progress',
+        error: null,
+      });
+
+      res.json({ strategyId: job.id });
+    } catch (error) {
+      console.error('Strategy start error:', error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : 'Failed to start strategy' 
+      });
+    }
+  });
+
+  app.post('/api/strategy/:id/step1', async (req, res) => {
+    try {
+      const job = await storage.getStrategyJob(req.params.id);
+      if (!job) {
+        return res.status(404).json({ error: 'Strategy not found' });
+      }
+
+      const sourceInfo = job.fileName || job.sourceUrl || 'Unknown source';
+      const result = await executeStep1(job.transcript, sourceInfo);
+
+      await storage.updateStrategyJob(job.id, {
+        step1Output: JSON.stringify(result),
+        currentStep: '2',
+      });
+
+      res.json(result);
+    } catch (error) {
+      console.error('Step 1 error:', error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : 'Failed to execute step 1' 
+      });
+    }
+  });
+
+  app.post('/api/strategy/:id/step2', async (req, res) => {
+    try {
+      const { step1Output } = req.body;
+      const job = await storage.getStrategyJob(req.params.id);
+      if (!job) {
+        return res.status(404).json({ error: 'Strategy not found' });
+      }
+
+      const result = await executeStep2(job.transcript, step1Output);
+
+      await storage.updateStrategyJob(job.id, {
+        step1Output: JSON.stringify(step1Output),
+        step2Output: JSON.stringify(result),
+        currentStep: '3',
+      });
+
+      res.json(result);
+    } catch (error) {
+      console.error('Step 2 error:', error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : 'Failed to execute step 2' 
+      });
+    }
+  });
+
+  app.post('/api/strategy/:id/step3', async (req, res) => {
+    try {
+      const { step1Output, selectedFormats } = req.body;
+      const job = await storage.getStrategyJob(req.params.id);
+      if (!job) {
+        return res.status(404).json({ error: 'Strategy not found' });
+      }
+
+      const result = await executeStep3(job.transcript, step1Output, selectedFormats);
+
+      await storage.updateStrategyJob(job.id, {
+        step3Output: JSON.stringify(result),
+        selectedFormats: JSON.stringify(selectedFormats),
+        currentStep: '4',
+      });
+
+      res.json(result);
+    } catch (error) {
+      console.error('Step 3 error:', error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : 'Failed to execute step 3' 
+      });
+    }
+  });
+
+  app.post('/api/strategy/:id/step4', async (req, res) => {
+    try {
+      const { selectedTitles } = req.body;
+      const job = await storage.getStrategyJob(req.params.id);
+      if (!job) {
+        return res.status(404).json({ error: 'Strategy not found' });
+      }
+
+      const selectedFormats = JSON.parse(job.selectedFormats || '[]');
+      const sourceInfo = job.fileName || job.sourceUrl || 'Unknown source';
+      
+      const result = await executeStep4(job.transcript, sourceInfo, selectedFormats, selectedTitles);
+
+      await storage.updateStrategyJob(job.id, {
+        step4Output: JSON.stringify(result),
+        currentStep: '5',
+      });
+
+      res.json(result);
+    } catch (error) {
+      console.error('Step 4 error:', error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : 'Failed to execute step 4' 
+      });
+    }
+  });
+
+  app.post('/api/strategy/:id/step5', async (req, res) => {
+    try {
+      const { step1Output, step4Output } = req.body;
+      const job = await storage.getStrategyJob(req.params.id);
+      if (!job) {
+        return res.status(404).json({ error: 'Strategy not found' });
+      }
+
+      const result = await executeStep5(step1Output, step4Output);
+
+      await storage.updateStrategyJob(job.id, {
+        step5Output: JSON.stringify(result),
+        status: 'completed',
+      });
+
+      res.json(result);
+    } catch (error) {
+      console.error('Step 5 error:', error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : 'Failed to execute step 5' 
+      });
+    }
+  });
+
+  app.get('/api/strategy/:id', async (req, res) => {
+    try {
+      const job = await storage.getStrategyJob(req.params.id);
+      
+      if (!job) {
+        return res.status(404).json({ error: 'Strategy not found' });
+      }
+
+      res.json(job);
+    } catch (error) {
+      console.error('Get strategy error:', error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : 'Failed to fetch strategy' 
+      });
+    }
+  });
+
+  app.get('/api/strategy/history', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const strategies = await storage.getUserStrategyJobs(userId);
+      res.json(strategies);
+    } catch (error) {
+      console.error("Error fetching strategy history:", error);
+      res.status(500).json({ message: "Failed to fetch strategy history" });
     }
   });
 

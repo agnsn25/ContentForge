@@ -5,9 +5,12 @@ import {
   type UpsertUser,
   type WritingSample,
   type InsertWritingSample,
+  type StrategyJob,
+  type InsertStrategyJob,
   contentJobs,
   users,
-  writingSamples
+  writingSamples,
+  strategyJobs
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
@@ -28,6 +31,12 @@ export interface IStorage {
   createWritingSample(sample: InsertWritingSample): Promise<WritingSample>;
   getUserWritingSamples(userId: string): Promise<WritingSample[]>;
   deleteWritingSample(id: string): Promise<void>;
+  
+  // Strategy job operations
+  createStrategyJob(job: InsertStrategyJob): Promise<StrategyJob>;
+  getStrategyJob(id: string): Promise<StrategyJob | undefined>;
+  updateStrategyJob(id: string, updates: Partial<StrategyJob>): Promise<StrategyJob>;
+  getUserStrategyJobs(userId: string): Promise<StrategyJob[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -120,6 +129,52 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(writingSamples)
       .where(eq(writingSamples.id, id));
+  }
+
+  // Strategy job operations
+  async createStrategyJob(insertJob: InsertStrategyJob): Promise<StrategyJob> {
+    const id = randomUUID();
+    const [job] = await db
+      .insert(strategyJobs)
+      .values({
+        id,
+        ...insertJob,
+      })
+      .returning();
+    return job;
+  }
+
+  async getStrategyJob(id: string): Promise<StrategyJob | undefined> {
+    const [job] = await db
+      .select()
+      .from(strategyJobs)
+      .where(eq(strategyJobs.id, id));
+    return job;
+  }
+
+  async updateStrategyJob(id: string, updates: Partial<StrategyJob>): Promise<StrategyJob> {
+    const [job] = await db
+      .update(strategyJobs)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(strategyJobs.id, id))
+      .returning();
+    
+    if (!job) {
+      throw new Error('Strategy job not found');
+    }
+    
+    return job;
+  }
+
+  async getUserStrategyJobs(userId: string): Promise<StrategyJob[]> {
+    return await db
+      .select()
+      .from(strategyJobs)
+      .where(eq(strategyJobs.userId, userId))
+      .orderBy(desc(strategyJobs.createdAt));
   }
 }
 
