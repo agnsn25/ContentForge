@@ -20,6 +20,7 @@ import type { ContentJob, StrategyJob } from "@shared/schema";
 import { format } from "date-fns";
 import logoUrl from "@assets/hammer-logo.png";
 import StrategyPreview from "@/components/StrategyPreview";
+import ContentPreview from "@/components/ContentPreview";
 
 type HistoryItem = (ContentJob & { itemType: 'quick' }) | (StrategyJob & { itemType: 'strategy' });
 
@@ -27,6 +28,7 @@ export default function History() {
   const { toast } = useToast();
   const { user, isAuthenticated, isLoading } = useAuth();
   const [viewingStrategy, setViewingStrategy] = useState<StrategyJob | null>(null);
+  const [viewingContent, setViewingContent] = useState<ContentJob | null>(null);
 
   // Redirect to home if not authenticated
   useEffect(() => {
@@ -100,9 +102,6 @@ export default function History() {
     }
   };
 
-  const viewContent = (jobId: string) => {
-    window.location.href = `/?jobId=${jobId}`;
-  };
 
   if (isLoading || isLoadingHistory) {
     return (
@@ -271,7 +270,7 @@ export default function History() {
                         variant="outline"
                         onClick={() => {
                           if (item.itemType === 'quick') {
-                            viewContent(item.id);
+                            setViewingContent(item);
                           } else {
                             setViewingStrategy(item);
                           }
@@ -318,6 +317,34 @@ export default function History() {
                     setViewingStrategy(null);
                     window.location.href = '/';
                   }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {viewingContent && viewingContent.transformedContent && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-start justify-center overflow-y-auto p-4">
+          <div className="relative w-full max-w-5xl my-8">
+            <div className="bg-card border border-border rounded-lg shadow-lg">
+              <div className="sticky top-0 bg-card border-b border-border px-6 py-4 flex items-center justify-between rounded-t-lg z-10">
+                <h2 className="text-2xl font-bold capitalize" data-testid="heading-content-view">
+                  {viewingContent.targetFormat} Content
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setViewingContent(null)}
+                  data-testid="button-close-content"
+                >
+                  Close
+                </Button>
+              </div>
+              <div className="p-6">
+                <ContentPreview
+                  content={JSON.parse(viewingContent.transformedContent)}
+                  format={viewingContent.targetFormat as any}
                 />
               </div>
             </div>
