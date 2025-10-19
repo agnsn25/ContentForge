@@ -313,10 +313,11 @@ export default function History() {
               </div>
               <div className="p-6">
                 <StrategyPreview
-                  step1Output={viewingStrategy.step1Output ? JSON.parse(viewingStrategy.step1Output) : null}
-                  step4Output={viewingStrategy.step4Output ? JSON.parse(viewingStrategy.step4Output) : []}
-                  step5Output={viewingStrategy.step5Output ? JSON.parse(viewingStrategy.step5Output) : []}
-                  sourceInfo={viewingStrategy.sourceUrl || viewingStrategy.fileName || 'Unknown source'}
+                  strategy={viewingStrategy}
+                  onStartNew={() => {
+                    setViewingStrategy(null);
+                    window.location.href = '/';
+                  }}
                 />
               </div>
             </div>
