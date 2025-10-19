@@ -372,6 +372,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // IMPORTANT: Specific routes must come BEFORE parameterized routes
+  app.get('/api/strategy/history', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const strategies = await storage.getUserStrategyJobs(userId);
+      res.json(strategies);
+    } catch (error) {
+      console.error("Error fetching strategy history:", error);
+      res.status(500).json({ message: "Failed to fetch strategy history" });
+    }
+  });
+
   app.get('/api/strategy/:id', async (req, res) => {
     try {
       const job = await storage.getStrategyJob(req.params.id);
@@ -386,17 +398,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         error: error instanceof Error ? error.message : 'Failed to fetch strategy' 
       });
-    }
-  });
-
-  app.get('/api/strategy/history', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const strategies = await storage.getUserStrategyJobs(userId);
-      res.json(strategies);
-    } catch (error) {
-      console.error("Error fetching strategy history:", error);
-      res.status(500).json({ message: "Failed to fetch strategy history" });
     }
   });
 
