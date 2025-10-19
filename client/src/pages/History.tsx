@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -15,14 +15,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import ThemeToggle from "@/components/ThemeToggle";
-import { Sparkles, FileText, Share2, Newspaper, Calendar, ExternalLink, Home, LogOut, History as HistoryIcon } from "lucide-react";
-import type { ContentJob } from "@shared/schema";
+import { Sparkles, FileText, Share2, Newspaper, Calendar, ExternalLink, Home, LogOut, Zap } from "lucide-react";
+import type { ContentJob, StrategyJob } from "@shared/schema";
 import { format } from "date-fns";
 import logoUrl from "@assets/hammer-logo.png";
+import StrategyPreview from "@/components/StrategyPreview";
+
+type HistoryItem = (ContentJob & { itemType: 'quick' }) | (StrategyJob & { itemType: 'strategy' });
 
 export default function History() {
   const { toast } = useToast();
   const { user, isAuthenticated, isLoading } = useAuth();
+  const [viewingStrategy, setViewingStrategy] = useState<StrategyJob | null>(null);
 
   // Redirect to home if not authenticated
   useEffect(() => {
@@ -39,10 +43,23 @@ export default function History() {
     }
   }, [isAuthenticated, isLoading, toast]);
 
-  const { data: history = [], isLoading: isLoadingHistory } = useQuery<ContentJob[]>({
+  const { data: contentHistory = [], isLoading: isLoadingContent } = useQuery<ContentJob[]>({
     queryKey: ["/api/content/history"],
     enabled: isAuthenticated,
   });
+
+  const { data: strategyHistory = [], isLoading: isLoadingStrategies } = useQuery<StrategyJob[]>({
+    queryKey: ["/api/strategy/history"],
+    enabled: isAuthenticated,
+  });
+
+  // Combine and sort by date
+  const history: HistoryItem[] = [
+    ...contentHistory.map(job => ({ ...job, itemType: 'quick' as const })),
+    ...strategyHistory.map(job => ({ ...job, itemType: 'strategy' as const }))
+  ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  const isLoadingHistory = isLoadingContent || isLoadingStrategies;
 
   const getFormatIcon = (format: string) => {
     switch (format) {
@@ -187,39 +204,56 @@ export default function History() {
           </Card>
         ) : (
           <div className="grid gap-4">
-            {history.map((job) => (
-              <Card key={job.id} data-testid={`card-job-${job.id}`} className="hover-elevate">
+            {history.map((item) => (
+              <Card key={item.id} data-testid={`card-job-${item.id}`} className="hover-elevate">
                 <CardHeader>
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <div className={getFormatColor(job.targetFormat)}>
-                          {getFormatIcon(job.targetFormat)}
-                        </div>
-                        <CardTitle className="text-lg capitalize" data-testid={`text-format-${job.id}`}>
-                          {job.targetFormat} Format
-                        </CardTitle>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {item.itemType === 'quick' ? (
+                          <>
+                            <div className={getFormatColor(item.targetFormat)}>
+                              {getFormatIcon(item.targetFormat)}
+                            </div>
+                            <CardTitle className="text-lg capitalize" data-testid={`text-format-${item.id}`}>
+                              {item.targetFormat} Format
+                            </CardTitle>
+                            <Badge variant="secondary" className="text-xs" data-testid={`badge-type-${item.id}`}>
+                              Quick Transform
+                            </Badge>
+                          </>
+                        ) : (
+                          <>
+                            <Zap className="h-4 w-4 text-primary" />
+                            <CardTitle className="text-lg" data-testid={`text-format-${item.id}`}>
+                              Complete Content Strategy
+                            </CardTitle>
+                            <Badge variant="default" className="text-xs" data-testid={`badge-type-${item.id}`}>
+                              Multi-Step Generator
+                            </Badge>
+                          </>
+                        )}
                       </div>
-                      <CardDescription className="flex items-center gap-2" data-testid={`text-source-${job.id}`}>
-                        {job.sourceType === "youtube" && job.sourceUrl ? (
+                      <CardDescription className="flex items-center gap-2" data-testid={`text-source-${item.id}`}>
+                        {item.sourceType === "youtube" && item.sourceUrl ? (
                           <a
-                            href={job.sourceUrl}
+                            href={item.sourceUrl}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center gap-1 hover:underline"
                           >
-                            {job.sourceUrl}
+                            {item.sourceUrl}
                             <ExternalLink className="h-3 w-3" />
                           </a>
-                        ) : job.fileName ? (
-                          job.fileName
+                        ) : item.fileName ? (
+                          item.fileName
                         ) : (
                           "Unknown source"
                         )}
                       </CardDescription>
                     </div>
                     <div className="flex items-center gap-2">
-                      {getStatusBadge(job.status)}
+                      {getStatusBadge(item.status)}
                     </div>
                   </div>
                 </CardHeader>
@@ -227,23 +261,29 @@ export default function History() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Calendar className="h-4 w-4" />
-                      <span data-testid={`text-date-${job.id}`}>
-                        {format(new Date(job.createdAt), "MMM d, yyyy 'at' h:mm a")}
+                      <span data-testid={`text-date-${item.id}`}>
+                        {format(new Date(item.createdAt), "MMM d, yyyy 'at' h:mm a")}
                       </span>
                     </div>
-                    {job.status === "completed" && (
+                    {item.status === "completed" && (
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => viewContent(job.id)}
-                        data-testid={`button-view-${job.id}`}
+                        onClick={() => {
+                          if (item.itemType === 'quick') {
+                            viewContent(item.id);
+                          } else {
+                            setViewingStrategy(item);
+                          }
+                        }}
+                        data-testid={`button-view-${item.id}`}
                       >
-                        View Content
+                        {item.itemType === 'quick' ? 'View Content' : 'View Strategy'}
                       </Button>
                     )}
-                    {job.status === "error" && (
-                      <p className="text-sm text-destructive" data-testid={`text-error-${job.id}`}>
-                        {job.error || "Processing failed"}
+                    {item.status === "error" && (
+                      <p className="text-sm text-destructive" data-testid={`text-error-${item.id}`}>
+                        {item.error || "Processing failed"}
                       </p>
                     )}
                   </div>
@@ -253,6 +293,36 @@ export default function History() {
           </div>
         )}
       </main>
+
+      {viewingStrategy && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-start justify-center overflow-y-auto p-4">
+          <div className="relative w-full max-w-5xl my-8">
+            <div className="bg-card border border-border rounded-lg shadow-lg">
+              <div className="sticky top-0 bg-card border-b border-border px-6 py-4 flex items-center justify-between rounded-t-lg z-10">
+                <h2 className="text-2xl font-bold" data-testid="heading-strategy-view">
+                  Complete Content Strategy
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setViewingStrategy(null)}
+                  data-testid="button-close-strategy"
+                >
+                  Close
+                </Button>
+              </div>
+              <div className="p-6">
+                <StrategyPreview
+                  step1Output={viewingStrategy.step1Output ? JSON.parse(viewingStrategy.step1Output) : null}
+                  step4Output={viewingStrategy.step4Output ? JSON.parse(viewingStrategy.step4Output) : []}
+                  step5Output={viewingStrategy.step5Output ? JSON.parse(viewingStrategy.step5Output) : []}
+                  sourceInfo={viewingStrategy.sourceUrl || viewingStrategy.fileName || 'Unknown source'}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
