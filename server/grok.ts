@@ -137,28 +137,50 @@ Return ONLY a valid JSON object with this structure:
   };
 
   try {
-    // Build the system prompt with style matching if writing samples are provided
-    let systemPrompt = systemPrompts[targetFormat];
+    // Build the system prompt with style matching FIRST if writing samples are provided
+    let systemPrompt = '';
     
     if (writingSamples && writingSamples.length > 0) {
-      const styleAnalysisSection = `\n\nSTYLE MATCHING INSTRUCTIONS:
-The user has provided ${writingSamples.length} writing sample(s) to match their personal style. Carefully analyze these samples for:
-- Tone and voice (formal/casual, serious/playful, professional/conversational)
-- Sentence structure (short/long, simple/complex, varied/consistent)
-- Vocabulary choices (technical/accessible, jargon/plain language)
-- Paragraph length and pacing
-- Use of rhetorical devices (questions, lists, metaphors, etc.)
-- Punctuation patterns and emphasis techniques
+      const styleMatchingPrompt = `🎯 CRITICAL PRIORITY: WRITING STYLE MATCHING
 
-Writing Sample(s):
+You MUST write in the user's personal voice, tone, and style. The user has provided ${writingSamples.length} writing sample(s) below. Your PRIMARY job is to analyze and REPLICATE their unique writing style.
+
+📝 Writing Sample(s):
 ${writingSamples.map((sample, idx) => `
-Sample ${idx + 1}: "${sample.title}" (${sample.wordCount} words)
+━━━ Sample ${idx + 1}: "${sample.title}" (${sample.wordCount} words) ━━━
 ${sample.content}
-`).join('\n---\n')}
+`).join('\n\n')}
 
-IMPORTANT: Transform the transcript content while MIMICKING THE WRITING STYLE from the samples above. The content should be about the transcript, but written as if the user from the samples wrote it themselves.`;
-      
-      systemPrompt += styleAnalysisSection;
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔍 MANDATORY STYLE ANALYSIS - Identify and REPLICATE:
+• Tone & Voice: Is it formal/casual, serious/playful, academic/conversational, enthusiastic/reserved?
+• Perspective: First person (I/we), second person (you), or third person? How does the writer address the reader?
+• Sentence Structure: Short punchy sentences vs. long flowing ones? Simple vs. complex? Rhythm and cadence?
+• Vocabulary Level: Technical jargon, casual slang, accessible language, sophisticated terminology?
+• Paragraph Style: One-liners? Dense blocks? How does pacing feel?
+• Humor & Personality: Witty asides? Dry humor? Earnest and straightforward? Sarcastic? Playful?
+• Rhetorical Devices: Questions to the reader? Lists? Metaphors? Analogies? Repetition for emphasis?
+• Punctuation & Emphasis: Em dashes—like this? Parentheticals (casually inserted)? Ellipses... for effect? Italics or bold?
+• Opening Style: How do they hook the reader?
+• Closing Style: How do they wrap up thoughts?
+
+⚡ YOUR TASK:
+Write as if YOU ARE this person. Every sentence should sound like they wrote it. Match their:
+- Energy level and enthusiasm
+- Formality vs. casualness  
+- Complexity vs. simplicity
+- Wordiness vs. brevity
+- Personality quirks and voice
+
+The reader should NOT be able to tell this wasn't written by the original author.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+`;
+      systemPrompt = styleMatchingPrompt + systemPrompts[targetFormat];
+    } else {
+      systemPrompt = systemPrompts[targetFormat];
     }
 
     const response = await openai.chat.completions.create({
