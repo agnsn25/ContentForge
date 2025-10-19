@@ -55,6 +55,7 @@ export const strategyJobs = pgTable("strategy_jobs", {
   sourceUrl: text("source_url"),
   fileName: text("file_name"),
   transcript: text("transcript").notNull(),
+  useStyleMatching: text("use_style_matching").notNull().default('false'),
   currentStep: text("current_step").notNull().default('1'),
   step1Output: text("step1_output"),
   step2Output: text("step2_output"),
