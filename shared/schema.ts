@@ -48,6 +48,26 @@ export const writingSamples = pgTable("writing_samples", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const strategyJobs = pgTable("strategy_jobs", {
+  id: varchar("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id),
+  sourceType: text("source_type").notNull(),
+  sourceUrl: text("source_url"),
+  fileName: text("file_name"),
+  transcript: text("transcript").notNull(),
+  currentStep: text("current_step").notNull().default('1'),
+  step1Output: text("step1_output"),
+  step2Output: text("step2_output"),
+  step3Output: text("step3_output"),
+  step4Output: text("step4_output"),
+  step5Output: text("step5_output"),
+  selectedFormats: text("selected_formats"),
+  status: text("status").notNull().default('in_progress'),
+  error: text("error"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const insertContentJobSchema = createInsertSchema(contentJobs).omit({
   id: true,
   createdAt: true,
@@ -63,6 +83,15 @@ export const insertWritingSampleSchema = createInsertSchema(writingSamples).omit
 
 export type InsertWritingSample = z.infer<typeof insertWritingSampleSchema>;
 export type WritingSample = typeof writingSamples.$inferSelect;
+
+export const insertStrategyJobSchema = createInsertSchema(strategyJobs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertStrategyJob = z.infer<typeof insertStrategyJobSchema>;
+export type StrategyJob = typeof strategyJobs.$inferSelect;
 
 // User types
 export type UpsertUser = typeof users.$inferInsert;
@@ -138,3 +167,40 @@ export interface XThreadContent {
 }
 
 export type TransformedContent = NewsletterContent | BlogContent | SocialContent | XThreadContent;
+
+// Strategy-specific types
+export interface Step1Analysis {
+  topic: string;
+  targetAudience: string;
+  primaryGoals: string[];
+  tone: string;
+  keyTakeaways: string[];
+}
+
+export interface Step2Recommendation {
+  format: TargetFormat;
+  reason: string;
+  priority: 'high' | 'medium' | 'low';
+  estimatedEngagement: string;
+}
+
+export interface Step3TitleOption {
+  format: TargetFormat;
+  titles: string[];
+}
+
+export interface Step4Content {
+  format: TargetFormat;
+  content: TransformedContent;
+}
+
+export interface Step5Schedule {
+  contentPiece: {
+    format: TargetFormat;
+    title: string;
+  };
+  publishDate: string;
+  publishTime: string;
+  platform: string;
+  promotionStrategy: string[];
+}
