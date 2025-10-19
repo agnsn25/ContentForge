@@ -56,7 +56,7 @@ export default function ContentPreview({ content, format }: ContentPreviewProps)
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+      <div className="space-y-3">
         <div className="flex items-center gap-3">
           <Badge variant="secondary" className="text-sm">
             {formatLabels[format]}
@@ -64,7 +64,7 @@ export default function ContentPreview({ content, format }: ContentPreviewProps)
           <h2 className="text-2xl font-bold text-foreground">{title}</h2>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 justify-end">
           <Button
             variant="outline"
             size="sm"
