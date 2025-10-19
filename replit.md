@@ -9,6 +9,7 @@ ContentHammer is an AI-powered web application that transforms long-form content
 - PostgreSQL database for persistent storage
 - Content history and saved transformations
 - Fully functional content transformation pipeline
+- **Multi-Step Strategy Generator** - 5-step AI-guided content marketing plan creation
 - **Writing Style Matching** - Upload 1-2 writing samples (max 800 words each) and AI mimics your style
 - Beautiful, responsive UI with dark mode support
 - YouTube transcript extraction (using @danielxceron/youtube-transcript)
@@ -16,6 +17,30 @@ ContentHammer is an AI-powered web application that transforms long-form content
 - File upload for audio, video, and text files
 - Real-time AI processing with progress indicators
 - Export functionality (copy/download as Markdown)
+
+## Recent Changes (October 19, 2025)
+
+### Multi-Step Content Strategy Generator (Latest)
+- **Two-Mode System**: Home page now has toggle between "Quick Transform" and "Strategy Generator"
+  - Quick Transform: Instant single-format transformation (original functionality)
+  - Strategy Generator: Complete 5-step content marketing strategy
+- **5-Step Wizard Flow**:
+  - Step 1: AI analyzes transcript (topic, audience, goals, tone, takeaways) - editable
+  - Step 2: AI recommends all 4 formats with reasons and priority - user selects desired formats
+  - Step 3: AI generates 5 title options per selected format - user chooses favorites
+  - Step 4: AI creates full content for all selected formats simultaneously
+  - Step 5: AI builds publishing calendar with dates, times, platforms, and promotion tactics
+- **User Control**: Review and modify outputs at each step before proceeding
+- **Format Flexibility**: Users can select 1, some, or all formats (newsletter, social, blog, x)
+- **Complete Strategy Output**: Final view includes all content + publishing schedule with export
+- **Database Persistence**: Strategy sessions saved for future access across login sessions
+- **New Components**:
+  - `StrategyWizard.tsx`: Multi-step UI with progress tracking and step navigation
+  - `StrategyPreview.tsx`: Final strategy display with tabbed content/schedule view
+- **Backend Services**:
+  - `server/strategy.ts`: 5 AI functions using Grok for each step
+  - API routes: `/api/strategy/start`, `/api/strategy/:id/step1-5`, `/api/strategy/:id`
+- **Database Schema**: New `strategyJobs` table with step outputs and user selections
 
 ## Recent Changes (October 18, 2025)
 
