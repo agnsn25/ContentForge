@@ -148,6 +148,8 @@ export default function Home() {
         formData.append('url', data.url);
         formData.append('sourceType', data.type || 'youtube');
       }
+      
+      formData.append('useStyleMatching', useStyleMatching.toString());
 
       const response = await fetch('/api/strategy/start', {
         method: 'POST',
@@ -386,6 +388,30 @@ export default function Home() {
                       <p className="text-xs text-muted-foreground">Get Schedule</p>
                     </div>
                   </div>
+
+                  {user && writingSamples.length > 0 && (
+                    <>
+                      <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-lg">
+                        <Checkbox 
+                          id="style-matching-strategy"
+                          checked={useStyleMatching}
+                          onCheckedChange={(checked) => setUseStyleMatching(checked === true)}
+                          data-testid="checkbox-style-matching-strategy"
+                        />
+                        <div className="flex-1">
+                          <Label 
+                            htmlFor="style-matching-strategy" 
+                            className="text-sm font-medium cursor-pointer"
+                          >
+                            Use my writing style
+                          </Label>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Apply your personal writing style from {writingSamples.length} sample{writingSamples.length > 1 ? 's' : ''} to all generated content
+                          </p>
+                        </div>
+                      </div>
+                    </>
+                  )}
 
                   <div className="h-px bg-border" />
 
