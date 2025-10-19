@@ -23,7 +23,7 @@ Requirements:
 - Include a "Quick Takeaway" box at the end
 - Make it scannable and email-friendly
 - Add a call-to-action at the end
-- Tone should be friendly and direct
+- If no writing style guide was provided above, use a friendly and direct tone
 
 Return ONLY a valid JSON object with this structure:
 {
@@ -54,9 +54,9 @@ Requirements:
 - Use numbered steps if it's a how-to
 - Make each slide self-contained but connected
 - Slide 9-10: Summary + CTA
-- Use emojis strategically
 - Make it actionable and easy to follow
 - Format as: "SLIDE 1:\\n[content]\\n\\nSLIDE 2:\\n[content]" etc.
+- If no writing style guide was provided above, use emojis strategically for visual appeal
 
 Return ONLY a valid JSON object with this structure:
 {
@@ -83,8 +83,8 @@ Requirements:
 - Organize content into 3-5 sections with descriptive headings
 - Use natural transitions between ideas
 - Include a conclusion with key takeaways
-- Maintain a conversational but professional tone
-- Add relevant examples or elaborations where the transcript is brief
+- Stay true to the content and ideas from the transcript
+- If no writing style guide was provided above, use a conversational but professional tone
 
 Return ONLY a valid JSON object with this structure:
 {
@@ -113,10 +113,10 @@ Requirements:
 - Each tweet: One clear idea (max 280 characters)
 - Use line breaks for readability
 - Last tweet: Summary or CTA
-- Conversational, punchy tone
 - Number the tweets (1/10, 2/10, etc.)
 - NO hashtags (platform is moving away from them)
 - Format as: "1/10\\n[tweet content]\\n\\n2/10\\n[tweet content]" etc.
+- If no writing style guide was provided above, use a conversational and punchy tone
 
 Return ONLY a valid JSON object with this structure:
 {
