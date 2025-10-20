@@ -117,7 +117,6 @@ export default function Home() {
       pollJobStatus(data.jobId);
     },
     onError: (err) => {
-      setJobStatus('error');
       setError(err.message);
     },
   });
@@ -409,6 +408,12 @@ export default function Home() {
                         onLinkSubmit={handleLinkSubmit}
                       />
                     </>
+                  )}
+
+                  {error && !jobStatus && (
+                    <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+                      <p className="text-sm text-destructive">{error}</p>
+                    </div>
                   )}
                 </div>
               ) : (
