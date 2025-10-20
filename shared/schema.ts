@@ -219,3 +219,55 @@ export interface Step5Schedule {
   platform: string;
   promotionStrategy: string[];
 }
+
+// Subscription plans table
+export const subscriptions = pgTable("subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id).unique(),
+  plan: text("plan").notNull(), // 'starter' | 'pro'
+  creditsTotal: text("credits_total").notNull(), // Total credits in plan per period
+  creditsUsed: text("credits_used").notNull().default('0'), // Credits used this period
+  billingPeriodStart: timestamp("billing_period_start").notNull(),
+  billingPeriodEnd: timestamp("billing_period_end").notNull(),
+  status: text("status").notNull().default('active'), // 'active' | 'cancelled' | 'expired'
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Credit transactions table for logging all credit usage
+export const creditTransactions = pgTable("credit_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  subscriptionId: varchar("subscription_id").references(() => subscriptions.id),
+  jobId: varchar("job_id"), // Reference to contentJobs or strategyJobs
+  jobType: text("job_type").notNull(), // 'quick_transform' | 'strategy_generator'
+  format: text("format"), // Target format (nullable for strategy steps)
+  creditsCharged: text("credits_charged").notNull(), // Amount of credits deducted
+  transcriptTokens: text("transcript_tokens"), // Tokens in transcript
+  outputTokens: text("output_tokens"), // Estimated output tokens
+  features: jsonb("features"), // {useStyleMatching: boolean, useLLMO: boolean}
+  description: text("description").notNull(), // Human-readable description
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
+export type Subscription = typeof subscriptions.$inferSelect;
+
+export const insertCreditTransactionSchema = createInsertSchema(creditTransactions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertCreditTransaction = z.infer<typeof insertCreditTransactionSchema>;
+export type CreditTransaction = typeof creditTransactions.$inferSelect;
+
+// Plan types
+export type PlanType = 'starter' | 'pro';
+export type SubscriptionStatus = 'active' | 'cancelled' | 'expired';
+export type JobType = 'quick_transform' | 'strategy_generator';
