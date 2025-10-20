@@ -12,7 +12,8 @@ export async function transformContent(
   targetFormat: TargetFormat,
   sourceInfo: string,
   writingSamples?: WritingSample[],
-  useLLMO?: boolean
+  useLLMO?: boolean,
+  model: string = "grok-2-1212"
 ): Promise<string> {
   // Create LLMO-enhanced blog prompt if needed
   const llmoBlogPrompt = `Convert this transcript into an LLMO/GEO-optimized blog post (800-1200 words).
@@ -271,7 +272,7 @@ The reader should NOT be able to tell this wasn't written by the original author
     }
 
     const response = await openai.chat.completions.create({
-      model: "grok-2-1212",
+      model: model,
       messages: [
         {
           role: "system",
