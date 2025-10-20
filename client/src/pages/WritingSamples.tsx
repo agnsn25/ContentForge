@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Plus, FileText, Home, LogOut, History as HistoryIcon, Brain } from "lucide-react";
+import { Trash2, Plus, FileText, Home, LogOut, History as HistoryIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -30,14 +30,6 @@ export default function WritingSamples() {
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [useGrok4, setUseGrok4] = useState(() => {
-    const saved = localStorage.getItem('useGrok4');
-    return saved === 'true';
-  });
-
-  useEffect(() => {
-    localStorage.setItem('useGrok4', useGrok4.toString());
-  }, [useGrok4]);
 
   const { data: samples = [], isLoading } = useQuery<WritingSample[]>({
     queryKey: ['/api/writing-samples'],
@@ -165,31 +157,6 @@ export default function WritingSamples() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel data-testid="text-user-email">{user.email}</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem 
-                    onSelect={(e) => {
-                      e.preventDefault();
-                      setUseGrok4(!useGrok4);
-                    }}
-                    data-testid="menuitem-model-toggle"
-                  >
-                    <div className="flex items-center gap-3 w-full">
-                      <Checkbox 
-                        checked={useGrok4} 
-                        onCheckedChange={(checked) => setUseGrok4(checked === true)}
-                        data-testid="checkbox-grok4"
-                      />
-                      <div className="flex flex-col gap-0.5">
-                        <div className="flex items-center gap-2">
-                          <Brain className="h-4 w-4" />
-                          <span className="font-medium">Use Grok-4 Fast</span>
-                        </div>
-                        <span className="text-xs text-muted-foreground">
-                          More cost-effective reasoning model
-                        </span>
-                      </div>
-                    </div>
-                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
                     onClick={() => window.location.href = '/api/logout'}
