@@ -101,7 +101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Transform content endpoint (works for both authenticated and guest users)
   app.post('/api/transform', upload.single('file'), async (req: any, res) => {
     try {
-      const { sourceType, targetFormat, url, useStyleMatching } = req.body;
+      const { sourceType, targetFormat, url, useStyleMatching, useLLMO } = req.body;
       const file = req.file;
 
       if (!targetFormat || !['newsletter', 'social', 'blog', 'x'].includes(targetFormat)) {
@@ -153,12 +153,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         transcript,
         targetFormat: targetFormat as TargetFormat,
         transformedContent: null,
+        useLLMO: useLLMO === 'true' ? 'true' : 'false',
         status: 'processing',
         error: null,
       });
 
       // Start async transformation (don't await)
-      processTransformation(job.id, transcript, targetFormat as TargetFormat, sourceInfo, writingSamples)
+      processTransformation(job.id, transcript, targetFormat as TargetFormat, sourceInfo, writingSamples, useLLMO === 'true')
         .catch(err => console.error('Transformation error:', err));
 
       res.json({ jobId: job.id, status: 'processing' });
@@ -191,7 +192,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Strategy Generator Routes
   app.post('/api/strategy/start', upload.single('file'), async (req: any, res) => {
     try {
-      const { sourceType, url, useStyleMatching } = req.body;
+      const { sourceType, url, useStyleMatching, useLLMO } = req.body;
       const file = req.file;
       const userId = req.user?.claims?.sub || null;
 
@@ -221,6 +222,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fileName,
         transcript,
         useStyleMatching: useStyleMatching === 'true' ? 'true' : 'false',
+        useLLMO: useLLMO === 'true' ? 'true' : 'false',
         currentStep: '1',
         step1Output: null,
         step2Output: null,
@@ -332,7 +334,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         writingSamples = await storage.getUserWritingSamples(job.userId);
       }
       
-      const result = await executeStep4(job.transcript, sourceInfo, selectedFormats, selectedTitles, writingSamples);
+      const useLLMO = job.useLLMO === 'true';
+      const result = await executeStep4(job.transcript, sourceInfo, selectedFormats, selectedTitles, writingSamples, useLLMO);
 
       await storage.updateStrategyJob(job.id, {
         step4Output: JSON.stringify(result),
@@ -410,7 +413,8 @@ async function processTransformation(
   transcript: string, 
   targetFormat: TargetFormat,
   sourceInfo: string,
-  writingSamples?: any[]
+  writingSamples?: any[],
+  useLLMO?: boolean
 ) {
   try {
     console.log('Processing transformation for job:', jobId);
@@ -418,7 +422,10 @@ async function processTransformation(
     if (writingSamples && writingSamples.length > 0) {
       console.log('Using style matching with', writingSamples.length, 'writing sample(s)');
     }
-    const transformedContent = await transformContent(transcript, targetFormat, sourceInfo, writingSamples);
+    if (useLLMO && targetFormat === 'blog') {
+      console.log('Using LLMO optimization for blog post');
+    }
+    const transformedContent = await transformContent(transcript, targetFormat, sourceInfo, writingSamples, useLLMO);
     
     await storage.updateContentJob(jobId, {
       transformedContent,
