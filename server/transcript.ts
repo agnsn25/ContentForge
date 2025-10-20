@@ -2,23 +2,16 @@ import { YoutubeTranscript } from '@danielxceron/youtube-transcript';
 import spotifyUrlInfo from 'spotify-url-info';
 
 export async function getYoutubeTranscript(url: string): Promise<{ transcript: string; title: string }> {
-  const videoId = extractYoutubeVideoId(url);
-  if (!videoId) {
-    throw new Error('Invalid YouTube URL');
-  }
-
-  console.log('Fetching YouTube transcript for:', url);
-  
-  // List of common languages to try in order
-  const languagesToTry = ['en', 'en-US', 'en-GB', 'es', 'fr', 'de', 'pt', 'it', 'ja', 'ko', 'zh', 'ru', 'ar', 'hi'];
-  
-  let lastError: Error | null = null;
-  
-  // Try without language first (uses default)
   try {
+    const videoId = extractYoutubeVideoId(url);
+    if (!videoId) {
+      throw new Error('Invalid YouTube URL');
+    }
+
+    console.log('Fetching YouTube transcript for:', url);
+    
     const transcriptData = await YoutubeTranscript.fetchTranscript(videoId);
     
-    // Combine transcript with timestamps
     const transcript = transcriptData
       .map(item => {
         const timestamp = formatTimestamp(item.offset / 1000);
@@ -31,49 +24,9 @@ export async function getYoutubeTranscript(url: string): Promise<{ transcript: s
       title: `YouTube Video (${videoId})`
     };
   } catch (error) {
-    console.log('Default language failed, trying specific languages...');
-    lastError = error as Error;
+    console.error('YouTube transcript error:', error);
+    throw new Error(`Failed to fetch YouTube transcript: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
-  
-  // If default failed, try specific languages
-  for (const lang of languagesToTry) {
-    try {
-      console.log(`Trying language: ${lang}`);
-      const transcriptData = await YoutubeTranscript.fetchTranscript(videoId, { lang });
-      
-      // Combine transcript with timestamps
-      const transcript = transcriptData
-        .map(item => {
-          const timestamp = formatTimestamp(item.offset / 1000);
-          return `[${timestamp}] ${item.text}`;
-        })
-        .join('\n');
-
-      console.log(`✓ Successfully fetched transcript in ${lang}`);
-      return {
-        transcript,
-        title: `YouTube Video (${videoId})`
-      };
-    } catch (error) {
-      // Continue to next language
-      continue;
-    }
-  }
-  
-  // All attempts failed
-  console.error('YouTube transcript error after trying all languages:', lastError);
-  
-  // Check if this is a transcript disabled error
-  if (lastError && lastError.message.includes('Transcript is disabled')) {
-    throw new Error(`This YouTube video has captions/transcripts disabled by the creator. Please try a different video, or upload a text/audio file instead. (Video ID: ${videoId})`);
-  }
-  
-  // Check if this is a transcript not available error
-  if (lastError && (lastError.message.includes('Could not find') || lastError.message.includes('not available'))) {
-    throw new Error(`No captions/transcripts found for this YouTube video in any supported language. Please ensure the video has captions enabled, or try a different video. (Video ID: ${videoId})`);
-  }
-  
-  throw new Error(`Failed to fetch YouTube transcript: ${lastError ? lastError.message : 'Unknown error'}`);
 }
 
 export async function getSpotifyTranscript(url: string): Promise<{ transcript: string; title: string }> {
