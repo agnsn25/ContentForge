@@ -49,7 +49,7 @@ export default function Home() {
     enabled: !!user,
   });
 
-  const { data: subscriptionData } = useQuery<{ hasSubscription: boolean; subscription?: { tier: string; creditsRemaining: number } }>({
+  const { data: subscriptionData } = useQuery<{ hasSubscription: boolean; subscription?: { plan: string; creditsRemaining: number } }>({
     queryKey: ['/api/subscription'],
     enabled: !!user,
   });
@@ -298,7 +298,7 @@ export default function Home() {
                   {subscriptionData.subscription?.creditsRemaining || 0}
                 </span>
                 <Badge variant="secondary" className="text-xs" data-testid="text-subscription-tier">
-                  {subscriptionData.subscription?.tier || 'Unknown'}
+                  {subscriptionData.subscription?.plan || 'Unknown'}
                 </Badge>
               </Button>
             )}
