@@ -15,14 +15,21 @@ ContentHammer is a full-stack application built with React and TypeScript for th
 
 **UI/UX Decisions:**
 - **Design System:** Uses Tailwind CSS with a custom design token system.
-- **Color Scheme:** Indigo primary (#6366F1), emerald secondary (#10B981), and amber accent (#F59E0B).
+- **Color Scheme:** Indigo primary (#6366F1), emerald secondary (#10B981), and amber accent (#F59E0B). Amber-based warning colors for copyright notices.
 - **Theming:** Full dark mode support with class-based toggling.
 - **Responsiveness:** Optimized for all screen sizes.
-- **Navigation:** Consistent header across pages (Home, History, Writing Samples) with a simplified user dropdown for logout.
+- **Navigation:** Consistent header across pages (Home, History, Writing Samples) with a simplified user dropdown for logout. Footer with ToS link on all pages.
+- **Copyright UX:** Warning boxes with AlertTriangle icon in amber color scheme appear before upload zones. Upload functionality disabled until ToS acceptance checkbox is checked.
 
 **Technical Implementations & Feature Specifications:**
 - **User Authentication:** Replit Auth provides secure login via Google, GitHub, Email, X, and Apple, with PostgreSQL-backed session management.
 - **Content Input:** Supports file uploads (audio, video, text), YouTube links (with transcript extraction), and Spotify links (for metadata).
+- **Copyright Protection & Legal Compliance:**
+    - **Terms of Service:** Comprehensive ToS page at `/terms` with explicit copyright compliance requirements, user responsibilities, indemnification clauses, and DMCA compliance procedures.
+    - **Upload Warnings:** Prominent copyright notices displayed in both Quick Transform and Strategy Generator modes before content upload.
+    - **ToS Acceptance:** Required checkbox acknowledgment that users own rights or have permission to transform content before upload zone is accessible.
+    - **Footer Links:** ToS links available in footer across all pages (Home, History, Writing Samples, Landing) for easy access.
+    - **Legal Framework:** Users must confirm ownership or permission, accept liability for copyright violations, and indemnify the platform against infringement claims.
 - **Content Transformation:**
     - Uses xAI Grok (grok-2-1212 model) with 131K token context for AI processing.
     - **Multi-Step Content Strategy Generator:** A 5-step wizard guides users through creating a complete content marketing strategy, including analysis, format selection, title generation, content creation, and a publishing calendar. Users can optionally apply their writing style to all generated content.
