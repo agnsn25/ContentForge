@@ -9,6 +9,8 @@ export async function getYoutubeTranscript(url: string): Promise<{ transcript: s
       throw new Error('Invalid YouTube URL');
     }
 
+    console.log('Fetching YouTube transcript for:', url);
+    
     // Get transcript
     const transcriptData = await YoutubeTranscript.fetchTranscript(videoId);
     
@@ -26,6 +28,17 @@ export async function getYoutubeTranscript(url: string): Promise<{ transcript: s
     };
   } catch (error) {
     console.error('YouTube transcript error:', error);
+    
+    // Check if this is a transcript disabled error
+    if (error instanceof Error && error.message.includes('Transcript is disabled')) {
+      throw new Error(`This YouTube video doesn't have captions/transcripts enabled. Please try a different video that has captions, or upload a text/audio file instead. (Video ID: ${extractYoutubeVideoId(url)})`);
+    }
+    
+    // Check if this is a transcript not available error
+    if (error instanceof Error && (error.message.includes('Could not find') || error.message.includes('not available'))) {
+      throw new Error(`No captions/transcripts found for this YouTube video. Please ensure the video has English captions enabled, or try a different video. (Video ID: ${extractYoutubeVideoId(url)})`);
+    }
+    
     throw new Error(`Failed to fetch YouTube transcript: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
