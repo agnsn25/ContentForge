@@ -8,6 +8,7 @@ import Landing from "@/pages/Landing";
 import Home from "@/pages/Home";
 import History from "@/pages/History";
 import WritingSamples from "@/pages/WritingSamples";
+import TermsOfService from "@/pages/TermsOfService";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -27,6 +28,7 @@ function Router() {
 
   return (
     <Switch>
+      <Route path="/terms" component={TermsOfService} />
       {isLoading || !isAuthenticated ? (
         <Route path="/" component={Landing} />
       ) : (
