@@ -468,6 +468,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const selectedFormats = JSON.parse(job.selectedFormats || '[]');
       const sourceInfo = job.fileName || job.sourceUrl || 'Unknown source';
       
+      // Check credits if user is authenticated
+      if (job.userId) {
+        const subscription = await storage.getUserSubscription(job.userId);
+        
+        if (!subscription) {
+          return res.status(403).json({ 
+            error: 'No active subscription. Please subscribe to a plan to use this feature.',
+            requiresSubscription: true 
+          });
+        }
+
+        // Calculate credits needed for the entire strategy
+        const { totalCredits, breakdown } = calculateStrategyGeneratorCredits(
+          job.transcript,
+          selectedFormats,
+          job.useStyleMatching === 'true',
+          job.useLLMO === 'true'
+        );
+
+        // Check if user has sufficient credits
+        const creditsUsed = parseInt(subscription.creditsUsed);
+        const creditsTotal = parseInt(subscription.creditsTotal);
+        const creditsRemaining = creditsTotal - creditsUsed;
+
+        if (creditsRemaining < totalCredits) {
+          return res.status(403).json({ 
+            error: `Insufficient credits. You need ${totalCredits} credits but only have ${creditsRemaining} remaining.`,
+            creditsNeeded: totalCredits,
+            creditsRemaining,
+            insufficientCredits: true
+          });
+        }
+
+        // Deduct credits
+        await storage.deductCredits(job.userId, totalCredits);
+
+        // Log transaction
+        await storage.createCreditTransaction({
+          userId: job.userId,
+          subscriptionId: subscription.id,
+          jobId: job.id,
+          jobType: 'strategy_generator',
+          format: null, // Multiple formats
+          creditsCharged: totalCredits.toString(),
+          transcriptTokens: null, // Already tracked in calculation
+          outputTokens: null,
+          features: {
+            useStyleMatching: job.useStyleMatching === 'true',
+            useLLMO: job.useLLMO === 'true',
+            selectedFormats,
+          },
+          description: `Strategy Generator (${selectedFormats.length} formats: ${selectedFormats.join(', ')})`,
+        });
+      }
+      
       // Get writing samples if style matching is enabled
       let writingSamples = undefined;
       if (job.useStyleMatching === 'true' && job.userId) {
