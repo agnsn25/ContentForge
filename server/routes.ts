@@ -101,7 +101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Transform content endpoint (works for both authenticated and guest users)
   app.post('/api/transform', upload.single('file'), async (req: any, res) => {
     try {
-      const { sourceType, targetFormat, url, useStyleMatching, useLLMO } = req.body;
+      const { sourceType, targetFormat, url, useStyleMatching, useLLMO, model } = req.body;
       const file = req.file;
 
       if (!targetFormat || !['newsletter', 'social', 'blog', 'x'].includes(targetFormat)) {
@@ -159,7 +159,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Start async transformation (don't await)
-      processTransformation(job.id, transcript, targetFormat as TargetFormat, sourceInfo, writingSamples, useLLMO === 'true')
+      const grokModel = model || 'grok-2-1212';
+      processTransformation(job.id, transcript, targetFormat as TargetFormat, sourceInfo, writingSamples, useLLMO === 'true', grokModel)
         .catch(err => console.error('Transformation error:', err));
 
       res.json({ jobId: job.id, status: 'processing' });
@@ -414,18 +415,20 @@ async function processTransformation(
   targetFormat: TargetFormat,
   sourceInfo: string,
   writingSamples?: any[],
-  useLLMO?: boolean
+  useLLMO?: boolean,
+  model?: string
 ) {
   try {
     console.log('Processing transformation for job:', jobId);
     console.log('Transcript length being sent to Grok:', transcript.length);
+    console.log('Using model:', model || 'grok-2-1212');
     if (writingSamples && writingSamples.length > 0) {
       console.log('Using style matching with', writingSamples.length, 'writing sample(s)');
     }
     if (useLLMO && targetFormat === 'blog') {
       console.log('Using LLMO optimization for blog post');
     }
-    const transformedContent = await transformContent(transcript, targetFormat, sourceInfo, writingSamples, useLLMO);
+    const transformedContent = await transformContent(transcript, targetFormat, sourceInfo, writingSamples, useLLMO, model);
     
     await storage.updateContentJob(jobId, {
       transformedContent,
