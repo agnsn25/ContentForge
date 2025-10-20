@@ -181,16 +181,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch credit transactions" });
     }
   });
-  
-  // Transform content endpoint (works for both authenticated and guest users)
-  app.post('/api/transform', upload.single('file'), async (req: any, res) => {
-    try {
-      const { sourceType, targetFormat, url, useStyleMatching, useLLMO, model } = req.body;
-      const file = req.file;
 
-      if (!targetFormat || !['newsletter', 'social', 'blog', 'x'].includes(targetFormat)) {
-        return res.status(400).json({ error: 'Invalid target format' });
-      }
+  // Extract transcript endpoint - extracts transcript without transformation for cost estimation
+  app.post('/api/extract-transcript', upload.single('file'), async (req: any, res) => {
+    try {
+      const { sourceType, url } = req.body;
+      const file = req.file;
 
       let transcript = '';
       let sourceUrl = '';
@@ -203,10 +199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fileName = file.originalname;
         sourceInfo = fileName;
       } else if (sourceType === 'youtube' && url) {
-        console.log('Fetching YouTube transcript for:', url);
         const result = await getYoutubeTranscript(url);
-        console.log('Transcript length:', result.transcript.length);
-        console.log('First 200 chars:', result.transcript.substring(0, 200));
         transcript = result.transcript;
         sourceUrl = url;
         sourceInfo = result.title;
@@ -217,6 +210,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
         sourceInfo = result.title;
       } else {
         return res.status(400).json({ error: 'Invalid source type or missing data' });
+      }
+
+      res.json({
+        transcript,
+        sourceUrl,
+        fileName,
+        sourceInfo,
+      });
+    } catch (error) {
+      console.error("Error extracting transcript:", error);
+      res.status(500).json({ error: error instanceof Error ? error.message : "Failed to extract transcript" });
+    }
+  });
+  
+  // Transform content endpoint (works for both authenticated and guest users)
+  app.post('/api/transform', upload.single('file'), async (req: any, res) => {
+    try {
+      const { sourceType, targetFormat, url, useStyleMatching, useLLMO, model, transcript: preExtractedTranscript, sourceInfo: preExtractedSourceInfo } = req.body;
+      const file = req.file;
+
+      if (!targetFormat || !['newsletter', 'social', 'blog', 'x'].includes(targetFormat)) {
+        return res.status(400).json({ error: 'Invalid target format' });
+      }
+
+      let transcript = '';
+      let sourceUrl = '';
+      let fileName = '';
+      let sourceInfo = '';
+
+      // If transcript is already provided (from extract-transcript), use it
+      if (preExtractedTranscript) {
+        transcript = preExtractedTranscript;
+        sourceInfo = preExtractedSourceInfo || 'Pre-extracted content';
+        sourceUrl = url || '';
+        fileName = file?.originalname || '';
+      } else {
+        // Otherwise, extract transcript based on source type
+        if (sourceType === 'file' && file) {
+          transcript = await extractTextFromFile(file);
+          fileName = file.originalname;
+          sourceInfo = fileName;
+        } else if (sourceType === 'youtube' && url) {
+          console.log('Fetching YouTube transcript for:', url);
+          const result = await getYoutubeTranscript(url);
+          console.log('Transcript length:', result.transcript.length);
+          console.log('First 200 chars:', result.transcript.substring(0, 200));
+          transcript = result.transcript;
+          sourceUrl = url;
+          sourceInfo = result.title;
+        } else if (sourceType === 'spotify' && url) {
+          const result = await getSpotifyTranscript(url);
+          transcript = result.transcript;
+          sourceUrl = url;
+          sourceInfo = result.title;
+        } else {
+          return res.status(400).json({ error: 'Invalid source type or missing data' });
+        }
       }
 
       // Get userId if user is authenticated
