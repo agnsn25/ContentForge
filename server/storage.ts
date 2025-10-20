@@ -7,14 +7,20 @@ import {
   type InsertWritingSample,
   type StrategyJob,
   type InsertStrategyJob,
+  type Subscription,
+  type InsertSubscription,
+  type CreditTransaction,
+  type InsertCreditTransaction,
   contentJobs,
   users,
   writingSamples,
-  strategyJobs
+  strategyJobs,
+  subscriptions,
+  creditTransactions
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (required for Replit Auth)
@@ -37,6 +43,16 @@ export interface IStorage {
   getStrategyJob(id: string): Promise<StrategyJob | undefined>;
   updateStrategyJob(id: string, updates: Partial<StrategyJob>): Promise<StrategyJob>;
   getUserStrategyJobs(userId: string): Promise<StrategyJob[]>;
+  
+  // Subscription operations
+  getUserSubscription(userId: string): Promise<Subscription | undefined>;
+  createSubscription(subscription: InsertSubscription): Promise<Subscription>;
+  updateSubscription(id: string, updates: Partial<Subscription>): Promise<Subscription>;
+  deductCredits(userId: string, amount: number): Promise<Subscription>;
+  
+  // Credit transaction operations
+  createCreditTransaction(transaction: InsertCreditTransaction): Promise<CreditTransaction>;
+  getUserCreditTransactions(userId: string, limit?: number): Promise<CreditTransaction[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -175,6 +191,78 @@ export class DatabaseStorage implements IStorage {
       .from(strategyJobs)
       .where(eq(strategyJobs.userId, userId))
       .orderBy(desc(strategyJobs.createdAt));
+  }
+
+  // Subscription operations
+  async getUserSubscription(userId: string): Promise<Subscription | undefined> {
+    const [subscription] = await db
+      .select()
+      .from(subscriptions)
+      .where(eq(subscriptions.userId, userId));
+    return subscription;
+  }
+
+  async createSubscription(insertSubscription: InsertSubscription): Promise<Subscription> {
+    const [subscription] = await db
+      .insert(subscriptions)
+      .values(insertSubscription)
+      .returning();
+    return subscription;
+  }
+
+  async updateSubscription(id: string, updates: Partial<Subscription>): Promise<Subscription> {
+    const [subscription] = await db
+      .update(subscriptions)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(subscriptions.id, id))
+      .returning();
+    
+    if (!subscription) {
+      throw new Error('Subscription not found');
+    }
+    
+    return subscription;
+  }
+
+  async deductCredits(userId: string, amount: number): Promise<Subscription> {
+    const subscription = await this.getUserSubscription(userId);
+    
+    if (!subscription) {
+      throw new Error('No active subscription found');
+    }
+
+    const creditsUsed = parseInt(subscription.creditsUsed);
+    const newCreditsUsed = creditsUsed + amount;
+
+    return await this.updateSubscription(subscription.id, {
+      creditsUsed: newCreditsUsed.toString(),
+    });
+  }
+
+  // Credit transaction operations
+  async createCreditTransaction(insertTransaction: InsertCreditTransaction): Promise<CreditTransaction> {
+    const [transaction] = await db
+      .insert(creditTransactions)
+      .values(insertTransaction)
+      .returning();
+    return transaction;
+  }
+
+  async getUserCreditTransactions(userId: string, limit?: number): Promise<CreditTransaction[]> {
+    let query = db
+      .select()
+      .from(creditTransactions)
+      .where(eq(creditTransactions.userId, userId))
+      .orderBy(desc(creditTransactions.createdAt));
+    
+    if (limit) {
+      query = query.limit(limit) as any;
+    }
+    
+    return await query;
   }
 }
 
