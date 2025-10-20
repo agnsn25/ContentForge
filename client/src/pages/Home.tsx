@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link } from 'wouter';
-import { Sparkles, LogOut, History as HistoryIcon, FileText, Zap, Map, Home as HomeIcon, AlertTriangle } from 'lucide-react';
+import { Sparkles, LogOut, History as HistoryIcon, FileText, Zap, Map, Home as HomeIcon, AlertTriangle, Brain } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import UploadZone from '@/components/UploadZone';
 import FormatSelector from '@/components/FormatSelector';
@@ -39,9 +39,17 @@ export default function Home() {
   const [useStyleMatching, setUseStyleMatching] = useState(false);
   const [useLLMO, setUseLLMO] = useState(false);
   const [tosAccepted, setTosAccepted] = useState(false);
+  const [useGrok4, setUseGrok4] = useState(() => {
+    const saved = localStorage.getItem('useGrok4');
+    return saved === 'true';
+  });
   
   const [strategyId, setStrategyId] = useState<string | null>(null);
   const [completedStrategy, setCompletedStrategy] = useState<StrategyJob | null>(null);
+
+  useEffect(() => {
+    localStorage.setItem('useGrok4', useGrok4.toString());
+  }, [useGrok4]);
 
   const { data: writingSamples = [] } = useQuery<WritingSample[]>({
     queryKey: ['/api/writing-samples'],
@@ -100,6 +108,9 @@ export default function Home() {
       if (data.useLLMO) {
         formData.append('useLLMO', 'true');
       }
+      
+      const model = useGrok4 ? 'grok-4-fast-reasoning' : 'grok-2-1212';
+      formData.append('model', model);
 
       const response = await fetch('/api/transform', {
         method: 'POST',
@@ -294,6 +305,31 @@ export default function Home() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel data-testid="text-user-email">{user.email}</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onSelect={(e) => {
+                      e.preventDefault();
+                      setUseGrok4(!useGrok4);
+                    }}
+                    data-testid="menuitem-model-toggle"
+                  >
+                    <div className="flex items-center gap-3 w-full">
+                      <Checkbox 
+                        checked={useGrok4} 
+                        onCheckedChange={(checked) => setUseGrok4(checked === true)}
+                        data-testid="checkbox-grok4"
+                      />
+                      <div className="flex flex-col gap-0.5">
+                        <div className="flex items-center gap-2">
+                          <Brain className="h-4 w-4" />
+                          <span className="font-medium">Use Grok-4 Fast</span>
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          More cost-effective reasoning model
+                        </span>
+                      </div>
+                    </div>
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
                     onClick={() => window.location.href = '/api/logout'}
