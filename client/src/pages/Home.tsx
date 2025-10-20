@@ -36,6 +36,7 @@ export default function Home() {
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [useStyleMatching, setUseStyleMatching] = useState(false);
+  const [useLLMO, setUseLLMO] = useState(false);
   
   const [strategyId, setStrategyId] = useState<string | null>(null);
   const [completedStrategy, setCompletedStrategy] = useState<StrategyJob | null>(null);
@@ -79,7 +80,7 @@ export default function Home() {
   }, []);
 
   const uploadMutation = useMutation({
-    mutationFn: async (data: { file?: File; url?: string; type?: 'youtube' | 'spotify'; format: TargetFormat; useStyleMatching?: boolean }) => {
+    mutationFn: async (data: { file?: File; url?: string; type?: 'youtube' | 'spotify'; format: TargetFormat; useStyleMatching?: boolean; useLLMO?: boolean }) => {
       const formData = new FormData();
       
       if (data.file) {
@@ -93,6 +94,9 @@ export default function Home() {
       formData.append('targetFormat', data.format);
       if (data.useStyleMatching) {
         formData.append('useStyleMatching', 'true');
+      }
+      if (data.useLLMO) {
+        formData.append('useLLMO', 'true');
       }
 
       const response = await fetch('/api/transform', {
@@ -151,7 +155,7 @@ export default function Home() {
     }
     
     setError(null);
-    uploadMutation.mutate({ file, format: selectedFormat, useStyleMatching });
+    uploadMutation.mutate({ file, format: selectedFormat, useStyleMatching, useLLMO });
   };
 
   const handleLinkSubmit = (url: string, type: 'youtube' | 'spotify') => {
@@ -161,7 +165,7 @@ export default function Home() {
     }
     
     setError(null);
-    uploadMutation.mutate({ url, type, format: selectedFormat, useStyleMatching });
+    uploadMutation.mutate({ url, type, format: selectedFormat, useStyleMatching, useLLMO });
   };
 
   const strategyMutation = useMutation({
@@ -177,6 +181,7 @@ export default function Home() {
       }
       
       formData.append('useStyleMatching', useStyleMatching.toString());
+      formData.append('useLLMO', useLLMO.toString());
 
       const response = await fetch('/api/strategy/start', {
         method: 'POST',
@@ -372,6 +377,32 @@ export default function Home() {
                           </div>
                         </>
                       )}
+                      
+                      {selectedFormat === 'blog' && (
+                        <>
+                          <div className="h-px bg-border" />
+                          <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-lg">
+                            <Checkbox 
+                              id="llmo-optimization"
+                              checked={useLLMO}
+                              onCheckedChange={(checked) => setUseLLMO(checked === true)}
+                              data-testid="checkbox-llmo"
+                            />
+                            <div className="flex-1">
+                              <Label 
+                                htmlFor="llmo-optimization" 
+                                className="text-sm font-medium cursor-pointer"
+                              >
+                                Optimize for LLMO/GEO (Blog Only)
+                              </Label>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Optimize content for AI search engines (ChatGPT, Google AI Overviews, Gemini) with keyword extraction, schema markup, and SEO analysis
+                              </p>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      
                       <div className="h-px bg-border" />
                       <UploadZone 
                         onFileSelect={handleFileSelect}
@@ -416,8 +447,8 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {user && writingSamples.length > 0 && (
-                    <>
+                  <div className="space-y-4">
+                    {user && writingSamples.length > 0 && (
                       <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-lg">
                         <Checkbox 
                           id="style-matching-strategy"
@@ -437,8 +468,28 @@ export default function Home() {
                           </p>
                         </div>
                       </div>
-                    </>
-                  )}
+                    )}
+                    
+                    <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-lg">
+                      <Checkbox 
+                        id="llmo-optimization-strategy"
+                        checked={useLLMO}
+                        onCheckedChange={(checked) => setUseLLMO(checked === true)}
+                        data-testid="checkbox-llmo-strategy"
+                      />
+                      <div className="flex-1">
+                        <Label 
+                          htmlFor="llmo-optimization-strategy" 
+                          className="text-sm font-medium cursor-pointer"
+                        >
+                          Optimize blog posts for LLMO/GEO
+                        </Label>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Optimize blog content for AI search engines with keyword extraction, schema markup, and SEO analysis
+                        </p>
+                      </div>
+                    </div>
+                  </div>
 
                   <div className="h-px bg-border" />
 
