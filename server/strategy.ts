@@ -25,7 +25,7 @@ Return ONLY a valid JSON object with this structure:
 }`;
 
   const completion = await openai.chat.completions.create({
-    model: "grok-2-1212",
+    model: "grok-4-fast-reasoning",
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: `Source: ${sourceInfo}\n\nTranscript:\n${transcript}` }
@@ -72,7 +72,7 @@ Return ONLY a valid JSON array with this structure:
 ]`;
 
   const completion = await openai.chat.completions.create({
-    model: "grok-2-1212",
+    model: "grok-4-fast-reasoning",
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: `Analysis:\n${JSON.stringify(step1Output, null, 2)}\n\nTranscript (first 2000 chars):\n${transcript.substring(0, 2000)}` }
@@ -113,7 +113,7 @@ Return ONLY a valid JSON array with this structure:
 ]`;
 
   const completion = await openai.chat.completions.create({
-    model: "grok-2-1212",
+    model: "grok-4-fast-reasoning",
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: `Analysis:\n${JSON.stringify(step1Output, null, 2)}\n\nSelected formats: ${selectedFormats.join(', ')}\n\nTranscript (first 2000 chars):\n${transcript.substring(0, 2000)}` }
@@ -216,7 +216,7 @@ Return ONLY a valid JSON array with this structure:
   });
 
   const completion = await openai.chat.completions.create({
-    model: "grok-2-1212",
+    model: "grok-4-fast-reasoning",
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: `Analysis:\n${JSON.stringify(step1Output, null, 2)}\n\nContent pieces:\n${JSON.stringify(contentSummary, null, 2)}` }

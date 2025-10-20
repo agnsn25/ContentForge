@@ -159,7 +159,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Start async transformation (don't await)
-      const grokModel = model || 'grok-2-1212';
+      const grokModel = model || 'grok-4-fast-reasoning';
       processTransformation(job.id, transcript, targetFormat as TargetFormat, sourceInfo, writingSamples, useLLMO === 'true', grokModel)
         .catch(err => console.error('Transformation error:', err));
 

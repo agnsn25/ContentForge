@@ -13,7 +13,7 @@ export async function transformContent(
   sourceInfo: string,
   writingSamples?: WritingSample[],
   useLLMO?: boolean,
-  model: string = "grok-2-1212"
+  model: string = "grok-4-fast-reasoning"
 ): Promise<string> {
   // Create LLMO-enhanced blog prompt if needed
   const llmoBlogPrompt = `Convert this transcript into an LLMO/GEO-optimized blog post (800-1200 words).
