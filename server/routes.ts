@@ -7,6 +7,12 @@ import { getYoutubeTranscript, getSpotifyTranscript, extractTextFromFile } from 
 import { executeStep1, executeStep2, executeStep3, executeStep4, executeStep5 } from "./strategy";
 import type { TargetFormat } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { 
+  calculateQuickTransformCredits, 
+  calculateStrategyGeneratorCredits,
+  calculateCreditsRemaining,
+  PLAN_DETAILS 
+} from "./credits";
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -95,6 +101,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting writing sample:", error);
       res.status(500).json({ message: "Failed to delete writing sample" });
+    }
+  });
+
+  // Subscription and credits routes
+  app.get('/api/subscription', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const subscription = await storage.getUserSubscription(userId);
+      
+      if (!subscription) {
+        return res.json({ 
+          hasSubscription: false,
+          message: 'No active subscription' 
+        });
+      }
+
+      const creditsUsed = parseInt(subscription.creditsUsed);
+      const creditsTotal = parseInt(subscription.creditsTotal);
+      const creditsRemaining = calculateCreditsRemaining(creditsUsed, creditsTotal);
+
+      res.json({
+        hasSubscription: true,
+        subscription: {
+          ...subscription,
+          creditsRemaining,
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching subscription:", error);
+      res.status(500).json({ message: "Failed to fetch subscription" });
+    }
+  });
+
+  app.post('/api/subscription/estimate', async (req, res) => {
+    try {
+      const { transcript, format, useStyleMatching, useLLMO, type, selectedFormats } = req.body;
+
+      if (!transcript) {
+        return res.status(400).json({ error: 'Transcript is required' });
+      }
+
+      if (type === 'strategy_generator') {
+        const formats = selectedFormats || ['newsletter', 'social', 'blog'];
+        const estimate = calculateStrategyGeneratorCredits(
+          transcript,
+          formats,
+          useStyleMatching || false,
+          useLLMO || false
+        );
+        return res.json(estimate);
+      } else {
+        // Quick transform
+        if (!format) {
+          return res.status(400).json({ error: 'Format is required for quick transform' });
+        }
+        const estimate = calculateQuickTransformCredits(
+          transcript,
+          format as TargetFormat,
+          useStyleMatching || false,
+          useLLMO || false
+        );
+        return res.json(estimate);
+      }
+    } catch (error) {
+      console.error("Error estimating credits:", error);
+      res.status(500).json({ message: "Failed to estimate credits" });
+    }
+  });
+
+  app.get('/api/credits/transactions', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+      const transactions = await storage.getUserCreditTransactions(userId, limit);
+      res.json(transactions);
+    } catch (error) {
+      console.error("Error fetching credit transactions:", error);
+      res.status(500).json({ message: "Failed to fetch credit transactions" });
     }
   });
   
