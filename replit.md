@@ -38,7 +38,7 @@ ContentHammer is a full-stack application built with React and TypeScript for th
     - **Footer Links:** ToS links available in footer across all pages (Home, History, Writing Samples, Landing) for easy access.
     - **Legal Framework:** Multi-layered protection with user warranties, liability disclaimers, indemnification, DMCA compliance, and repeat infringer termination policy.
 - **Content Transformation:**
-    - Uses xAI Grok (grok-2-1212 model) with 131K token context for AI processing.
+    - Uses xAI Grok (grok-4-fast-reasoning model) with 131K token context for AI processing.
     - **Multi-Step Content Strategy Generator:** A 5-step wizard guides users through creating a complete content marketing strategy, including analysis, format selection, title generation, content creation, and a publishing calendar. Users can optionally apply their writing style to all generated content.
     - **Writing Style Matching:** Users can upload up to two writing samples (max 800 words each) for the AI to analyze and mimic their tone, sentence structure, and vocabulary. This feature is optional and toggleable.
     - **Format-Specific Output Structures:** Each output format (Newsletter, Social Tutorial, Blog Post, X Thread) has a unique, detailed structure with specific word/character limits and content components.

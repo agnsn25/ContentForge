@@ -421,7 +421,7 @@ async function processTransformation(
   try {
     console.log('Processing transformation for job:', jobId);
     console.log('Transcript length being sent to Grok:', transcript.length);
-    console.log('Using model:', model || 'grok-2-1212');
+    console.log('Using model:', model || 'grok-4-fast-reasoning');
     if (writingSamples && writingSamples.length > 0) {
       console.log('Using style matching with', writingSamples.length, 'writing sample(s)');
     }
