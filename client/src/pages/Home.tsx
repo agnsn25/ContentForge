@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Sparkles, LogOut, History as HistoryIcon, FileText, Zap, Map } from 'lucide-react';
+import { Sparkles, LogOut, History as HistoryIcon, FileText, Zap, Map, Home as HomeIcon } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import UploadZone from '@/components/UploadZone';
 import FormatSelector from '@/components/FormatSelector';
@@ -241,6 +241,16 @@ export default function Home() {
           </div>
           
           <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => window.location.href = '/'}
+              data-testid="button-home-nav"
+            >
+              <HomeIcon className="h-4 w-4 mr-2" />
+              Home
+            </Button>
+
             {user && (
               <Button
                 variant="ghost"
