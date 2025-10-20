@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link } from 'wouter';
-import { Sparkles, LogOut, History as HistoryIcon, FileText, Zap, Map, Home as HomeIcon, AlertTriangle } from 'lucide-react';
+import { Sparkles, LogOut, History as HistoryIcon, FileText, Zap, Map, Home as HomeIcon, AlertTriangle, Coins } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import UploadZone from '@/components/UploadZone';
 import FormatSelector from '@/components/FormatSelector';
@@ -15,6 +15,7 @@ import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -45,6 +46,11 @@ export default function Home() {
 
   const { data: writingSamples = [] } = useQuery<WritingSample[]>({
     queryKey: ['/api/writing-samples'],
+    enabled: !!user,
+  });
+
+  const { data: subscriptionData } = useQuery<{ hasSubscription: boolean; subscription?: { tier: string; creditsRemaining: number } }>({
+    queryKey: ['/api/subscription'],
     enabled: !!user,
   });
 
@@ -278,6 +284,36 @@ export default function Home() {
             </Button>
             
             <ThemeToggle />
+            
+            {user && subscriptionData?.hasSubscription && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.location.href = '/pricing'}
+                className="gap-2"
+                data-testid="button-credits-badge"
+              >
+                <Coins className="h-4 w-4" />
+                <span className="font-medium" data-testid="text-credits-remaining">
+                  {subscriptionData.subscription?.creditsRemaining || 0}
+                </span>
+                <Badge variant="secondary" className="text-xs" data-testid="text-subscription-tier">
+                  {subscriptionData.subscription?.tier || 'Unknown'}
+                </Badge>
+              </Button>
+            )}
+            
+            {user && !subscriptionData?.hasSubscription && (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => window.location.href = '/pricing'}
+                data-testid="button-upgrade-pricing"
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                Upgrade
+              </Button>
+            )}
             
             {user && (
               <DropdownMenu>
