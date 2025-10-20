@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -323,6 +324,17 @@ export default function WritingSamples() {
           </>
         )}
       </main>
+      
+      <footer className="border-t py-6 mt-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
+            <p>&copy; {new Date().getFullYear()} ContentHammer. All rights reserved.</p>
+            <Link href="/terms">
+              <span className="text-primary hover:underline" data-testid="link-footer-terms">Terms of Service</span>
+            </Link>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

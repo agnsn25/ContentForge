@@ -1,3 +1,4 @@
+import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Sparkles, Zap, Clock, Shield } from "lucide-react";
@@ -126,13 +127,18 @@ export default function Landing() {
       {/* Footer */}
       <footer className="border-t mt-16">
         <div className="container mx-auto px-4 py-8">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-sm text-muted-foreground" data-testid="text-copyright">
-              © 2025 ContentHammer. All rights reserved.
+              © {new Date().getFullYear()} ContentHammer. All rights reserved.
             </p>
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              <span className="text-sm font-medium">Powered by Grok AI</span>
+            <div className="flex items-center gap-6">
+              <Link href="/terms">
+                <span className="text-sm text-primary hover:underline" data-testid="link-footer-terms">Terms of Service</span>
+              </Link>
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
+                <span className="text-sm font-medium">Powered by Grok AI</span>
+              </div>
             </div>
           </div>
         </div>
