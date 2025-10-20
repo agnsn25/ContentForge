@@ -14,9 +14,29 @@ export default function UploadZone({ onFileSelect, onLinkSubmit }: UploadZonePro
   const [linkUrl, setLinkUrl] = useState('');
   const [isLinkMode, setIsLinkMode] = useState(false);
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
+  const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB in bytes
+  const [fileError, setFileError] = useState<string | null>(null);
+
+  const onDrop = useCallback((acceptedFiles: File[], rejectedFiles: any[]) => {
+    setFileError(null);
+    
+    if (rejectedFiles.length > 0) {
+      const rejection = rejectedFiles[0];
+      if (rejection.errors[0]?.code === 'file-too-large') {
+        setFileError(`File is too large. Maximum size is 100MB. Your file is ${(rejection.file.size / 1024 / 1024).toFixed(1)}MB.`);
+      } else {
+        setFileError('Invalid file type. Please upload audio, video, or text files.');
+      }
+      return;
+    }
+    
     if (acceptedFiles.length > 0) {
-      onFileSelect(acceptedFiles[0]);
+      const file = acceptedFiles[0];
+      if (file.size > MAX_FILE_SIZE) {
+        setFileError(`File is too large. Maximum size is 100MB. Your file is ${(file.size / 1024 / 1024).toFixed(1)}MB.`);
+        return;
+      }
+      onFileSelect(file);
     }
   }, [onFileSelect]);
 
@@ -29,6 +49,7 @@ export default function UploadZone({ onFileSelect, onLinkSubmit }: UploadZonePro
       'application/pdf': ['.pdf'],
     },
     maxFiles: 1,
+    maxSize: MAX_FILE_SIZE,
   });
 
   const handleLinkSubmit = () => {
@@ -73,6 +94,9 @@ export default function UploadZone({ onFileSelect, onLinkSubmit }: UploadZonePro
               </p>
               <p className="text-sm text-muted-foreground">
                 or click to browse from your computer
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Maximum file size: 100MB
               </p>
             </div>
 
@@ -128,12 +152,21 @@ export default function UploadZone({ onFileSelect, onLinkSubmit }: UploadZonePro
         </div>
       )}
 
+      {fileError && (
+        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+          <p className="text-sm text-destructive" data-testid="text-file-error">{fileError}</p>
+        </div>
+      )}
+
       <div className="flex items-center gap-4">
         <div className="flex-1 h-px bg-border" />
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => setIsLinkMode(!isLinkMode)}
+          onClick={() => {
+            setIsLinkMode(!isLinkMode);
+            setFileError(null);
+          }}
           className="text-muted-foreground hover:text-foreground"
           data-testid="button-toggle-mode"
         >
