@@ -8,6 +8,7 @@ import Landing from "@/pages/Landing";
 import Home from "@/pages/Home";
 import History from "@/pages/History";
 import WritingSamples from "@/pages/WritingSamples";
+import Pricing from "@/pages/Pricing";
 import TermsOfService from "@/pages/TermsOfService";
 import NotFound from "@/pages/not-found";
 
@@ -29,6 +30,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/terms" component={TermsOfService} />
+      <Route path="/pricing" component={Pricing} />
       {isLoading || !isAuthenticated ? (
         <Route path="/" component={Landing} />
       ) : (
