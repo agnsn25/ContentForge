@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Sparkles, LogOut, History as HistoryIcon, FileText, Zap, Map, Home as HomeIcon } from 'lucide-react';
+import { Link } from 'wouter';
+import { Sparkles, LogOut, History as HistoryIcon, FileText, Zap, Map, Home as HomeIcon, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import UploadZone from '@/components/UploadZone';
 import FormatSelector from '@/components/FormatSelector';
@@ -37,6 +38,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [useStyleMatching, setUseStyleMatching] = useState(false);
   const [useLLMO, setUseLLMO] = useState(false);
+  const [tosAccepted, setTosAccepted] = useState(false);
   
   const [strategyId, setStrategyId] = useState<string | null>(null);
   const [completedStrategy, setCompletedStrategy] = useState<StrategyJob | null>(null);
@@ -413,10 +415,55 @@ export default function Home() {
                       )}
                       
                       <div className="h-px bg-border" />
-                      <UploadZone 
-                        onFileSelect={handleFileSelect}
-                        onLinkSubmit={handleLinkSubmit}
-                      />
+                      
+                      <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg space-y-3">
+                        <div className="flex items-start gap-3">
+                          <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" />
+                          <div className="flex-1 space-y-2">
+                            <p className="text-sm font-semibold text-foreground">
+                              Copyright Notice
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              Only upload or link to content that you own or have explicit permission to transform. 
+                              Transforming copyrighted content without permission may violate copyright law and could expose you to legal liability.
+                            </p>
+                            <div className="flex items-start gap-2 mt-3">
+                              <Checkbox 
+                                id="tos-acceptance"
+                                checked={tosAccepted}
+                                onCheckedChange={(checked) => setTosAccepted(checked === true)}
+                                data-testid="checkbox-tos-acceptance"
+                              />
+                              <Label 
+                                htmlFor="tos-acceptance" 
+                                className="text-xs cursor-pointer leading-relaxed"
+                              >
+                                I confirm that I own the rights to this content or have permission to create derivative works. 
+                                I have read and agree to the{' '}
+                                <Link href="/terms">
+                                  <span className="text-primary hover:underline font-medium" data-testid="link-terms">Terms of Service</span>
+                                </Link>
+                                .
+                              </Label>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="h-px bg-border" />
+                      
+                      {tosAccepted ? (
+                        <UploadZone 
+                          onFileSelect={handleFileSelect}
+                          onLinkSubmit={handleLinkSubmit}
+                        />
+                      ) : (
+                        <div className="p-8 text-center bg-muted/50 rounded-lg border-2 border-dashed">
+                          <p className="text-sm text-muted-foreground">
+                            Please accept the copyright notice and Terms of Service above to continue
+                          </p>
+                        </div>
+                      )}
                     </>
                   )}
 
@@ -507,11 +554,55 @@ export default function Home() {
                   </div>
 
                   <div className="h-px bg-border" />
+                  
+                  <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg space-y-3">
+                    <div className="flex items-start gap-3">
+                      <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1 space-y-2">
+                        <p className="text-sm font-semibold text-foreground">
+                          Copyright Notice
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Only upload or link to content that you own or have explicit permission to transform. 
+                          Transforming copyrighted content without permission may violate copyright law and could expose you to legal liability.
+                        </p>
+                        <div className="flex items-start gap-2 mt-3">
+                          <Checkbox 
+                            id="tos-acceptance-strategy"
+                            checked={tosAccepted}
+                            onCheckedChange={(checked) => setTosAccepted(checked === true)}
+                            data-testid="checkbox-tos-acceptance-strategy"
+                          />
+                          <Label 
+                            htmlFor="tos-acceptance-strategy" 
+                            className="text-xs cursor-pointer leading-relaxed"
+                          >
+                            I confirm that I own the rights to this content or have permission to create derivative works. 
+                            I have read and agree to the{' '}
+                            <Link href="/terms">
+                              <span className="text-primary hover:underline font-medium" data-testid="link-terms-strategy">Terms of Service</span>
+                            </Link>
+                            .
+                          </Label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
-                  <UploadZone 
-                    onFileSelect={handleFileSelectStrategy}
-                    onLinkSubmit={handleLinkSubmitStrategy}
-                  />
+                  <div className="h-px bg-border" />
+
+                  {tosAccepted ? (
+                    <UploadZone 
+                      onFileSelect={handleFileSelectStrategy}
+                      onLinkSubmit={handleLinkSubmitStrategy}
+                    />
+                  ) : (
+                    <div className="p-8 text-center bg-muted/50 rounded-lg border-2 border-dashed">
+                      <p className="text-sm text-muted-foreground">
+                        Please accept the copyright notice and Terms of Service above to continue
+                      </p>
+                    </div>
+                  )}
 
                   {error && (
                     <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
@@ -567,6 +658,17 @@ export default function Home() {
           </div>
         )}
       </main>
+      
+      <footer className="border-t py-6 mt-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
+            <p>&copy; {new Date().getFullYear()} ContentHammer. All rights reserved.</p>
+            <Link href="/terms">
+              <span className="text-primary hover:underline" data-testid="link-footer-terms">Terms of Service</span>
+            </Link>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
