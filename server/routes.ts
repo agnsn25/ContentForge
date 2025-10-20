@@ -222,6 +222,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get userId if user is authenticated
       const userId = req.isAuthenticated() ? req.user.claims.sub : null;
 
+      // Check credits if user is authenticated
+      if (userId) {
+        const subscription = await storage.getUserSubscription(userId);
+        
+        if (!subscription) {
+          return res.status(403).json({ 
+            error: 'No active subscription. Please subscribe to a plan to use this feature.',
+            requiresSubscription: true 
+          });
+        }
+
+        // Calculate credits needed
+        const { credits: creditsNeeded, transcriptTokens, estimatedOutputTokens, breakdown } = 
+          calculateQuickTransformCredits(
+            transcript,
+            targetFormat as TargetFormat,
+            useStyleMatching === 'true',
+            useLLMO === 'true'
+          );
+
+        // Check if user has sufficient credits
+        const creditsUsed = parseInt(subscription.creditsUsed);
+        const creditsTotal = parseInt(subscription.creditsTotal);
+        const creditsRemaining = creditsTotal - creditsUsed;
+
+        if (creditsRemaining < creditsNeeded) {
+          return res.status(403).json({ 
+            error: `Insufficient credits. You need ${creditsNeeded} credits but only have ${creditsRemaining} remaining.`,
+            creditsNeeded,
+            creditsRemaining,
+            insufficientCredits: true
+          });
+        }
+
+        // Deduct credits
+        await storage.deductCredits(userId, creditsNeeded);
+
+        // Log transaction
+        await storage.createCreditTransaction({
+          userId,
+          subscriptionId: subscription.id,
+          jobId: null, // Will be updated after job creation
+          jobType: 'quick_transform',
+          format: targetFormat,
+          creditsCharged: creditsNeeded.toString(),
+          transcriptTokens: transcriptTokens.toString(),
+          outputTokens: estimatedOutputTokens.toString(),
+          features: {
+            useStyleMatching: useStyleMatching === 'true',
+            useLLMO: useLLMO === 'true',
+          },
+          description: breakdown,
+        });
+      }
+
       // Get writing samples if style matching is enabled and user is authenticated
       let writingSamples = undefined;
       if (useStyleMatching === 'true' && userId) {
