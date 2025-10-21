@@ -251,9 +251,9 @@ export default function Home() {
         setExtractedSourceInfo(data.sourceInfo);
         setPendingUploadData(variables);
 
-        // Calculate cost estimate
+        // Calculate cost estimate for both quick and strategy modes
         if (mode === 'quick' && selectedFormat) {
-          console.log('Requesting cost estimate...');
+          console.log('Requesting cost estimate for quick transform...');
           const response = await apiRequest('POST', '/api/subscription/estimate', {
             transcript: data.transcript,
             format: selectedFormat,
@@ -261,21 +261,26 @@ export default function Home() {
             useLLMO,
           });
           
-          console.log('Cost estimate response:', response);
           const estimate = await response.json();
           console.log('Cost estimate data:', estimate);
           
           setCostEstimate(estimate);
           setShowCostDialog(true);
         } else if (mode === 'strategy') {
-          // For strategy, just start it (no cost preview dialog for now)
-          strategyMutation.mutate({ 
-            transcript: data.transcript, 
-            sourceInfo: data.sourceInfo,
-            file: variables.file,
-            url: variables.url,
-            type: variables.type,
+          console.log('Requesting cost estimate for strategy...');
+          // For strategy, calculate total cost for all formats
+          const response = await apiRequest('POST', '/api/subscription/estimate', {
+            transcript: data.transcript,
+            formats: ['newsletter', 'social', 'blog', 'x'],
+            useStyleMatching,
+            useLLMO,
           });
+          
+          const estimate = await response.json();
+          console.log('Strategy cost estimate:', estimate);
+          
+          setCostEstimate(estimate);
+          setShowCostDialog(true);
         }
       } catch (err: any) {
         console.error('Error in extract success handler:', err);
@@ -313,19 +318,31 @@ export default function Home() {
   };
 
   const confirmTransform = () => {
-    if (!selectedFormat || !extractedTranscript) return;
+    if (!extractedTranscript) return;
     
     setShowCostDialog(false);
-    uploadMutation.mutate({ 
-      file: pendingUploadData?.file, 
-      url: pendingUploadData?.url,
-      type: pendingUploadData?.type,
-      format: selectedFormat, 
-      useStyleMatching, 
-      useLLMO,
-      transcript: extractedTranscript,
-      sourceInfo: extractedSourceInfo,
-    });
+    
+    if (mode === 'quick') {
+      if (!selectedFormat) return;
+      uploadMutation.mutate({ 
+        file: pendingUploadData?.file, 
+        url: pendingUploadData?.url,
+        type: pendingUploadData?.type,
+        format: selectedFormat, 
+        useStyleMatching, 
+        useLLMO,
+        transcript: extractedTranscript,
+        sourceInfo: extractedSourceInfo,
+      });
+    } else if (mode === 'strategy') {
+      strategyMutation.mutate({ 
+        transcript: extractedTranscript, 
+        sourceInfo: extractedSourceInfo,
+        file: pendingUploadData?.file,
+        url: pendingUploadData?.url,
+        type: pendingUploadData?.type,
+      });
+    }
   };
 
   const handleFileSelectStrategy = (file: File) => {
