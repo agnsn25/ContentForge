@@ -82,9 +82,15 @@ export default function StrategyWizard({ strategyId, onComplete }: StrategyWizar
         step1Output,
         step4Output,
       });
-      return response.json();
+      const data = await response.json();
+      console.log('Step 5 API response:', data);
+      console.log('Is array?', Array.isArray(data));
+      console.log('Length:', data?.length);
+      return data;
     },
     onSuccess: (data) => {
+      console.log('Step 5 onSuccess - data:', data);
+      console.log('Setting step5Data with:', data);
       setStep5Data(data);
     },
   });
