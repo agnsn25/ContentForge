@@ -18,20 +18,20 @@ const FORMAT_OUTPUT_TOKENS: Record<TargetFormat, number> = {
   x: 575,            // Base: 500 tokens → 575 with 15% buffer
 };
 
-// System prompt overhead tokens by format (with 15% safety buffer)
+// System prompt overhead tokens by format (exact known values, no padding needed)
 const FORMAT_SYSTEM_TOKENS: Record<TargetFormat, number> = {
-  newsletter: 575,   // Base: 500 → 575 with 15% buffer
-  social: 575,
-  blog: 575,
-  x: 575,
+  newsletter: 500,   // Known exact value for our system prompts
+  social: 500,
+  blog: 500,
+  x: 500,
 };
 
-// LLMO adds extra output tokens for metadata (with 15% safety buffer)
-const LLMO_EXTRA_OUTPUT_TOKENS = 1380;  // Base: 1200 → 1380 with 15% buffer
-const LLMO_EXTRA_SYSTEM_TOKENS = 575;   // Base: 500 → 575 with 15% buffer
+// LLMO adds extra tokens
+const LLMO_EXTRA_OUTPUT_TOKENS = 1380;  // AI-generated metadata: Base 1200 → 1380 with 15% buffer
+const LLMO_EXTRA_SYSTEM_TOKENS = 500;   // Known system prompt (exact value, no padding)
 
-// Writing style matching adds user samples to input (with 15% safety buffer)
-const STYLE_MATCHING_EXTRA_TOKENS = 2415; // Base: 2100 → 2415 with 15% buffer
+// Writing style matching adds user samples to input (base estimate for typical samples)
+const STYLE_MATCHING_EXTRA_TOKENS = 2100; // Base estimate for user writing samples
 
 /**
  * Estimate transcript tokens from text
