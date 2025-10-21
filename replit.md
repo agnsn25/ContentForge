@@ -45,13 +45,14 @@ ContentHammer is a full-stack application built with React and TypeScript for th
 - **Credit System & Billing:**
     - **Conversion Rate:** 1 credit = 1,000 tokens
     - **Fixed-Price Model:** Users are charged the quoted estimate (not actual Grok API usage) for predictable pricing
-    - **Smart Padding Strategy:** Only AI-generated outputs include 15% safety buffer; known values (system prompts, user content) use exact token counts
+    - **Smart Padding Strategy:** Only AI-generated outputs include 15% safety buffer; known values (system prompts, user content, writing samples) use exact measured token counts
     - **Token Breakdown:**
         - Format outputs (padded): Newsletter/Social 805, Blog 1,610, X Thread 575
         - System prompts (exact): 500 tokens per format
         - LLMO output (padded): 1,380 tokens; LLMO system (exact): 500 tokens
-        - Style matching (base): 2,100 tokens for user samples
-        - Strategy Generator steps: Mix of exact system prompts (500) and padded AI outputs (460-690)
+        - Style matching: Exact measured tokens from user's writing samples (up to 2 samples, 800 words each)
+        - Transcript: Exact measured tokens (1 token ≈ 4 characters)
+        - Strategy Generator steps: Mix of exact system prompts (500) and padded AI outputs (575, 460, 345/format, 690)
     - **Hard Block:** No transformations allowed if insufficient credits; no override option
     - **Subscription Tiers:** Starter ($19/500 credits), Pro ($49/1,500 credits)
 - **Content History:** All transformations are saved to the database and linked to user accounts, accessible via a dedicated history page.
