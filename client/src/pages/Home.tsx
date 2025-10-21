@@ -245,6 +245,7 @@ export default function Home() {
     },
     onSuccess: async (data, variables) => {
       try {
+        console.log('Extract success - data:', data);
         // Store extracted transcript
         setExtractedTranscript(data.transcript);
         setExtractedSourceInfo(data.sourceInfo);
@@ -252,12 +253,17 @@ export default function Home() {
 
         // Calculate cost estimate
         if (mode === 'quick' && selectedFormat) {
-          const estimate = await apiRequest('POST', '/api/credits/estimate', {
+          console.log('Requesting cost estimate...');
+          const response = await apiRequest('POST', '/api/credits/estimate', {
             transcript: data.transcript,
             format: selectedFormat,
             useStyleMatching,
             useLLMO,
-          }).then(r => r.json());
+          });
+          
+          console.log('Cost estimate response:', response);
+          const estimate = await response.json();
+          console.log('Cost estimate data:', estimate);
           
           setCostEstimate(estimate);
           setShowCostDialog(true);
@@ -273,6 +279,11 @@ export default function Home() {
         }
       } catch (err: any) {
         console.error('Error in extract success handler:', err);
+        console.error('Error details:', {
+          message: err.message,
+          stack: err.stack,
+          full: err
+        });
         setError(err.message || 'An error occurred');
       }
     },
