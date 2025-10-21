@@ -42,6 +42,18 @@ ContentHammer is a full-stack application built with React and TypeScript for th
     - **Multi-Step Content Strategy Generator:** A 5-step wizard guides users through creating a complete content marketing strategy, including analysis, format selection, title generation, content creation, and a publishing calendar. Users can optionally apply their writing style to all generated content.
     - **Writing Style Matching:** Users can upload up to two writing samples (max 800 words each) for the AI to analyze and mimic their tone, sentence structure, and vocabulary. This feature is optional and toggleable.
     - **Format-Specific Output Structures:** Each output format (Newsletter, Social Tutorial, Blog Post, X Thread) has a unique, detailed structure with specific word/character limits and content components.
+- **Credit System & Billing:**
+    - **Conversion Rate:** 1 credit = 1,000 tokens
+    - **Fixed-Price Model:** Users are charged the quoted estimate (not actual Grok API usage) for predictable pricing
+    - **Smart Padding Strategy:** Only AI-generated outputs include 15% safety buffer; known values (system prompts, user content) use exact token counts
+    - **Token Breakdown:**
+        - Format outputs (padded): Newsletter/Social 805, Blog 1,610, X Thread 575
+        - System prompts (exact): 500 tokens per format
+        - LLMO output (padded): 1,380 tokens; LLMO system (exact): 500 tokens
+        - Style matching (base): 2,100 tokens for user samples
+        - Strategy Generator steps: Mix of exact system prompts (500) and padded AI outputs (460-690)
+    - **Hard Block:** No transformations allowed if insufficient credits; no override option
+    - **Subscription Tiers:** Starter ($19/500 credits), Pro ($49/1,500 credits)
 - **Content History:** All transformations are saved to the database and linked to user accounts, accessible via a dedicated history page.
 - **Export Options:** Transformed content can be copied to the clipboard or downloaded as a Markdown file.
 
