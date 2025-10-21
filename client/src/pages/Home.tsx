@@ -239,6 +239,10 @@ export default function Home() {
 
       return response.json();
     },
+    onMutate: () => {
+      // Clear any previous errors when starting
+      setError(null);
+    },
     onSuccess: async (data, variables) => {
       // Store extracted transcript
       setExtractedTranscript(data.transcript);
