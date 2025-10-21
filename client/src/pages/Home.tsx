@@ -271,7 +271,8 @@ export default function Home() {
           // For strategy, calculate total cost for all formats
           const response = await apiRequest('POST', '/api/subscription/estimate', {
             transcript: data.transcript,
-            formats: ['newsletter', 'social', 'blog', 'x'],
+            type: 'strategy_generator',
+            selectedFormats: ['newsletter', 'social', 'blog', 'x'],
             useStyleMatching,
             useLLMO,
           });
