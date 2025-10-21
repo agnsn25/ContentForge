@@ -11,9 +11,10 @@ import type { Step1Analysis, Step2Recommendation, Step3TitleOption, Step4Content
 interface StrategyWizardProps {
   strategyId: string;
   onComplete: () => void;
+  onCreditsDeducted?: () => void;
 }
 
-export default function StrategyWizard({ strategyId, onComplete }: StrategyWizardProps) {
+export default function StrategyWizard({ strategyId, onComplete, onCreditsDeducted }: StrategyWizardProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [step1Data, setStep1Data] = useState<Step1Analysis | null>(null);
   const [step2Data, setStep2Data] = useState<Step2Recommendation[]>([]);
@@ -73,6 +74,10 @@ export default function StrategyWizard({ strategyId, onComplete }: StrategyWizar
     },
     onSuccess: (data) => {
       setStep4Data(data);
+      // Credits are deducted after Step 4, so refresh the subscription
+      if (onCreditsDeducted) {
+        onCreditsDeducted();
+      }
     },
   });
 

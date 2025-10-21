@@ -361,8 +361,7 @@ export default function Home() {
       const response = await apiRequest('GET', `/api/strategy/${strategyId}`);
       const strategy = await response.json();
       setCompletedStrategy(strategy);
-      // Refresh subscription to update credits badge
-      refetchSubscription();
+      // No need to refresh subscription here - already refreshed after Step 4
     }
   };
 
@@ -493,6 +492,7 @@ export default function Home() {
           <StrategyWizard 
             strategyId={strategyId}
             onComplete={handleStrategyComplete}
+            onCreditsDeducted={refetchSubscription}
           />
         ) : (extractMutation.isPending || strategyMutation.isPending) ? (
           <div className="flex flex-col items-center justify-center py-24 space-y-6">
