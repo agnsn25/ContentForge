@@ -8,7 +8,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Coins, TrendingDown } from "lucide-react";
+import { Coins, TrendingDown, Info } from "lucide-react";
 
 interface QuickTransformBreakdown {
   baseFormatCredits: number;
@@ -83,6 +83,14 @@ export default function CostConfirmationDialog({
         </AlertDialogHeader>
 
         <div className="space-y-4 py-4">
+          {isStrategy && (
+            <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3 flex items-start gap-3">
+              <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-blue-900 dark:text-blue-100">
+                This estimate is for all 4 content formats. Your actual cost will be lower if you select fewer formats in Step 2.
+              </p>
+            </div>
+          )}
           <div className="bg-muted/50 rounded-lg p-4 space-y-3">
             {isStrategy ? (
               <>
