@@ -254,7 +254,7 @@ export default function Home() {
         // Calculate cost estimate
         if (mode === 'quick' && selectedFormat) {
           console.log('Requesting cost estimate...');
-          const response = await apiRequest('POST', '/api/credits/estimate', {
+          const response = await apiRequest('POST', '/api/subscription/estimate', {
             transcript: data.transcript,
             format: selectedFormat,
             useStyleMatching,
