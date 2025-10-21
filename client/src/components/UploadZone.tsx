@@ -136,11 +136,17 @@ export default function UploadZone({ onFileSelect, onLinkSubmit }: UploadZonePro
                 placeholder="https://youtube.com/watch?v=... or https://open.spotify.com/..."
                 value={linkUrl}
                 onChange={(e) => setLinkUrl(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleLinkSubmit()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleLinkSubmit();
+                  }
+                }}
                 className="flex-1"
                 data-testid="input-link"
               />
               <Button 
+                type="button"
                 onClick={handleLinkSubmit} 
                 disabled={!linkUrl.trim()}
                 data-testid="button-submit-link"

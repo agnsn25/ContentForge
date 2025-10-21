@@ -244,31 +244,36 @@ export default function Home() {
       setError(null);
     },
     onSuccess: async (data, variables) => {
-      // Store extracted transcript
-      setExtractedTranscript(data.transcript);
-      setExtractedSourceInfo(data.sourceInfo);
-      setPendingUploadData(variables);
+      try {
+        // Store extracted transcript
+        setExtractedTranscript(data.transcript);
+        setExtractedSourceInfo(data.sourceInfo);
+        setPendingUploadData(variables);
 
-      // Calculate cost estimate
-      if (mode === 'quick' && selectedFormat) {
-        const estimate = await apiRequest('POST', '/api/credits/estimate', {
-          transcript: data.transcript,
-          format: selectedFormat,
-          useStyleMatching,
-          useLLMO,
-        }).then(r => r.json());
-        
-        setCostEstimate(estimate);
-        setShowCostDialog(true);
-      } else if (mode === 'strategy') {
-        // For strategy, just start it (no cost preview dialog for now)
-        strategyMutation.mutate({ 
-          transcript: data.transcript, 
-          sourceInfo: data.sourceInfo,
-          file: variables.file,
-          url: variables.url,
-          type: variables.type,
-        });
+        // Calculate cost estimate
+        if (mode === 'quick' && selectedFormat) {
+          const estimate = await apiRequest('POST', '/api/credits/estimate', {
+            transcript: data.transcript,
+            format: selectedFormat,
+            useStyleMatching,
+            useLLMO,
+          }).then(r => r.json());
+          
+          setCostEstimate(estimate);
+          setShowCostDialog(true);
+        } else if (mode === 'strategy') {
+          // For strategy, just start it (no cost preview dialog for now)
+          strategyMutation.mutate({ 
+            transcript: data.transcript, 
+            sourceInfo: data.sourceInfo,
+            file: variables.file,
+            url: variables.url,
+            type: variables.type,
+          });
+        }
+      } catch (err: any) {
+        console.error('Error in extract success handler:', err);
+        setError(err.message || 'An error occurred');
       }
     },
     onError: (err: any) => {
