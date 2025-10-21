@@ -10,19 +10,32 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Coins, TrendingDown } from "lucide-react";
 
-interface CreditBreakdown {
+interface QuickTransformBreakdown {
   baseFormatCredits: number;
   styleMatchingMultiplier?: number;
   llmoMultiplier?: number;
   totalMultiplier: number;
 }
 
-interface CreditEstimate {
+interface StrategyStepBreakdown {
+  step: string;
+  credits: number;
+  description: string;
+}
+
+interface QuickTransformEstimate {
   credits: number;
   transcriptTokens: number;
   estimatedOutputTokens: number;
-  breakdown: CreditBreakdown;
+  breakdown: QuickTransformBreakdown;
 }
+
+interface StrategyGeneratorEstimate {
+  totalCredits: number;
+  breakdown: StrategyStepBreakdown[];
+}
+
+type CreditEstimate = QuickTransformEstimate | StrategyGeneratorEstimate;
 
 interface CostConfirmationDialogProps {
   open: boolean;
@@ -31,6 +44,10 @@ interface CostConfirmationDialogProps {
   estimate: CreditEstimate | null;
   creditsRemaining: number;
   isPending?: boolean;
+}
+
+function isStrategyEstimate(estimate: CreditEstimate): estimate is StrategyGeneratorEstimate {
+  return 'totalCredits' in estimate && Array.isArray((estimate as any).breakdown);
 }
 
 export default function CostConfirmationDialog({
@@ -43,7 +60,9 @@ export default function CostConfirmationDialog({
 }: CostConfirmationDialogProps) {
   if (!estimate) return null;
 
-  const creditsAfter = creditsRemaining - estimate.credits;
+  const isStrategy = isStrategyEstimate(estimate);
+  const totalCredits = isStrategy ? estimate.totalCredits : estimate.credits;
+  const creditsAfter = creditsRemaining - totalCredits;
   const isInsufficient = creditsAfter < 0;
 
   return (
@@ -55,41 +74,63 @@ export default function CostConfirmationDialog({
             Confirm Credit Usage
           </AlertDialogTitle>
           <AlertDialogDescription>
-            This transformation will cost {estimate.credits} credits.
+            {isStrategy ? (
+              <>This strategy will cost {totalCredits} credits for all 5 steps.</>
+            ) : (
+              <>This transformation will cost {totalCredits} credits.</>
+            )}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         <div className="space-y-4 py-4">
           <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Base cost</span>
-              <span className="font-medium">{estimate.breakdown.baseFormatCredits} credits</span>
-            </div>
-            
-            {estimate.breakdown.styleMatchingMultiplier && (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Style Matching (+20%)</span>
-                <span className="font-medium">
-                  ×{estimate.breakdown.styleMatchingMultiplier.toFixed(2)}
-                </span>
-              </div>
+            {isStrategy ? (
+              <>
+                {estimate.breakdown.map((step, index) => (
+                  <div key={index} className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">{step.description}</span>
+                    <span className="font-medium">{step.credits} credits</span>
+                  </div>
+                ))}
+                <div className="h-px bg-border" />
+                <div className="flex justify-between font-semibold">
+                  <span>Total Cost</span>
+                  <span className="text-primary">{totalCredits} credits</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Base cost</span>
+                  <span className="font-medium">{estimate.breakdown.baseFormatCredits} credits</span>
+                </div>
+                
+                {estimate.breakdown.styleMatchingMultiplier && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Style Matching (+20%)</span>
+                    <span className="font-medium">
+                      ×{estimate.breakdown.styleMatchingMultiplier.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                
+                {estimate.breakdown.llmoMultiplier && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">LLMO Optimization (+80%)</span>
+                    <span className="font-medium">
+                      ×{estimate.breakdown.llmoMultiplier.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                
+                <div className="h-px bg-border" />
+                
+                <div className="flex justify-between font-semibold">
+                  <span>Total Cost</span>
+                  <span className="text-primary">{totalCredits} credits</span>
+                </div>
+              </>
             )}
-            
-            {estimate.breakdown.llmoMultiplier && (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">LLMO Optimization (+80%)</span>
-                <span className="font-medium">
-                  ×{estimate.breakdown.llmoMultiplier.toFixed(2)}
-                </span>
-              </div>
-            )}
-            
-            <div className="h-px bg-border" />
-            
-            <div className="flex justify-between font-semibold">
-              <span>Total Cost</span>
-              <span className="text-primary">{estimate.credits} credits</span>
-            </div>
           </div>
 
           <div className="bg-muted/30 rounded-lg p-4 space-y-2">
@@ -100,7 +141,7 @@ export default function CostConfirmationDialog({
               </span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">After Transformation</span>
+              <span className="text-muted-foreground">After {isStrategy ? 'Strategy' : 'Transformation'}</span>
               <span 
                 className={`font-medium ${isInsufficient ? 'text-destructive' : ''}`}
                 data-testid="text-balance-after"
@@ -118,21 +159,23 @@ export default function CostConfirmationDialog({
                   Insufficient Credits
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  You need {Math.abs(creditsAfter)} more credits to complete this transformation.
+                  You need {Math.abs(creditsAfter)} more credits to complete this {isStrategy ? 'strategy' : 'transformation'}.
                   Please upgrade your plan or wait for your credits to reset.
                 </p>
               </div>
             </div>
           )}
 
-          <div className="text-xs text-muted-foreground">
-            <p>
-              <strong>Transcript:</strong> ~{estimate.transcriptTokens.toLocaleString()} tokens
-            </p>
-            <p>
-              <strong>Est. Output:</strong> ~{estimate.estimatedOutputTokens.toLocaleString()} tokens
-            </p>
-          </div>
+          {!isStrategy && (
+            <div className="text-xs text-muted-foreground">
+              <p>
+                <strong>Transcript:</strong> ~{estimate.transcriptTokens.toLocaleString()} tokens
+              </p>
+              <p>
+                <strong>Est. Output:</strong> ~{estimate.estimatedOutputTokens.toLocaleString()} tokens
+              </p>
+            </div>
+          )}
         </div>
 
         <AlertDialogFooter>
@@ -144,7 +187,7 @@ export default function CostConfirmationDialog({
             disabled={isInsufficient || isPending}
             data-testid="button-confirm-transform"
           >
-            {isPending ? 'Processing...' : 'Confirm & Transform'}
+            {isPending ? 'Processing...' : isStrategy ? 'Start Strategy Generator' : 'Confirm & Transform'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
