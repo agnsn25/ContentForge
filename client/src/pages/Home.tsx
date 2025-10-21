@@ -173,6 +173,47 @@ export default function Home() {
     }, 2000);
   };
 
+  const strategyMutation = useMutation({
+    mutationFn: async (data: { file?: File; url?: string; type?: 'youtube' | 'spotify'; transcript?: string; sourceInfo?: string }) => {
+      const formData = new FormData();
+      
+      if (data.file) {
+        formData.append('file', data.file);
+        formData.append('sourceType', 'file');
+      } else if (data.url) {
+        formData.append('url', data.url);
+        formData.append('sourceType', data.type || 'youtube');
+      }
+
+      // If transcript is pre-extracted, include it
+      if (data.transcript) {
+        formData.append('transcript', data.transcript);
+        formData.append('sourceInfo', data.sourceInfo || '');
+      }
+      
+      formData.append('useStyleMatching', useStyleMatching.toString());
+      formData.append('useLLMO', useLLMO.toString());
+
+      const response = await fetch('/api/strategy/start', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to start strategy');
+      }
+
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setStrategyId(data.strategyId);
+    },
+    onError: (err) => {
+      setError(err.message);
+    },
+  });
+
   // Extract transcript mutation (for cost preview)
   const extractMutation = useMutation({
     mutationFn: async (data: { file?: File; url?: string; type?: 'youtube' | 'spotify' }) => {
@@ -216,10 +257,14 @@ export default function Home() {
         setCostEstimate(estimate);
         setShowCostDialog(true);
       } else if (mode === 'strategy') {
-        // For strategy, we'll show total cost in a dialog
-        // This will be calculated once user selects formats
-        // For now, just start the strategy
-        confirmStrategy(data.transcript, data.sourceInfo);
+        // For strategy, just start it (no cost preview dialog for now)
+        strategyMutation.mutate({ 
+          transcript: data.transcript, 
+          sourceInfo: data.sourceInfo,
+          file: variables.file,
+          url: variables.url,
+          type: variables.type,
+        });
       }
     },
     onError: (err: any) => {
@@ -263,47 +308,6 @@ export default function Home() {
     });
   };
 
-  const strategyMutation = useMutation({
-    mutationFn: async (data: { file?: File; url?: string; type?: 'youtube' | 'spotify'; transcript?: string; sourceInfo?: string }) => {
-      const formData = new FormData();
-      
-      if (data.file) {
-        formData.append('file', data.file);
-        formData.append('sourceType', 'file');
-      } else if (data.url) {
-        formData.append('url', data.url);
-        formData.append('sourceType', data.type || 'youtube');
-      }
-
-      // If transcript is pre-extracted, include it
-      if (data.transcript) {
-        formData.append('transcript', data.transcript);
-        formData.append('sourceInfo', data.sourceInfo || '');
-      }
-      
-      formData.append('useStyleMatching', useStyleMatching.toString());
-      formData.append('useLLMO', useLLMO.toString());
-
-      const response = await fetch('/api/strategy/start', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to start strategy');
-      }
-
-      return response.json();
-    },
-    onSuccess: (data) => {
-      setStrategyId(data.strategyId);
-    },
-    onError: (err) => {
-      setError(err.message);
-    },
-  });
-
   const handleFileSelectStrategy = (file: File) => {
     setError(null);
     extractMutation.mutate({ file });
@@ -312,16 +316,6 @@ export default function Home() {
   const handleLinkSubmitStrategy = (url: string, type: 'youtube' | 'spotify') => {
     setError(null);
     extractMutation.mutate({ url, type });
-  };
-
-  const confirmStrategy = (transcript: string, sourceInfo: string) => {
-    strategyMutation.mutate({ 
-      transcript, 
-      sourceInfo,
-      file: pendingUploadData?.file,
-      url: pendingUploadData?.url,
-      type: pendingUploadData?.type,
-    });
   };
 
   const handleStrategyComplete = async () => {
