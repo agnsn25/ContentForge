@@ -30,9 +30,6 @@ const FORMAT_SYSTEM_TOKENS: Record<TargetFormat, number> = {
 const LLMO_EXTRA_OUTPUT_TOKENS = 1380;  // AI-generated metadata: Base 1200 → 1380 with 15% buffer
 const LLMO_EXTRA_SYSTEM_TOKENS = 500;   // Known system prompt (exact value, no padding)
 
-// Writing style matching adds user samples to input (base estimate for typical samples)
-const STYLE_MATCHING_EXTRA_TOKENS = 2100; // Base estimate for user writing samples
-
 /**
  * Estimate transcript tokens from text
  * Rule of thumb: 1 token ≈ 4 characters
@@ -48,7 +45,7 @@ export function calculateTotalTokens(
   transcriptTokens: number,
   format: TargetFormat,
   options: {
-    useStyleMatching?: boolean;
+    styleMatchingTokens?: number;  // Exact measured tokens from user writing samples
     useLLMO?: boolean;
   } = {}
 ): {
@@ -59,9 +56,9 @@ export function calculateTotalTokens(
   let inputTokens = transcriptTokens + FORMAT_SYSTEM_TOKENS[format];
   let outputTokens = FORMAT_OUTPUT_TOKENS[format];
 
-  // Add style matching tokens to input
-  if (options.useStyleMatching) {
-    inputTokens += STYLE_MATCHING_EXTRA_TOKENS;
+  // Add style matching tokens to input (exact measured value from user samples)
+  if (options.styleMatchingTokens) {
+    inputTokens += options.styleMatchingTokens;
   }
 
   // Add LLMO tokens (both input prompt and output metadata)
@@ -85,7 +82,7 @@ export function calculateCredits(
   transcriptTokens: number,
   format: TargetFormat,
   options: {
-    useStyleMatching?: boolean;
+    styleMatchingTokens?: number;  // Exact measured tokens from user writing samples
     useLLMO?: boolean;
   } = {}
 ): number {
@@ -103,7 +100,7 @@ export function calculateCredits(
 export function calculateQuickTransformCredits(
   transcript: string,
   format: TargetFormat,
-  useStyleMatching: boolean = false,
+  writingSamples: string[] = [],
   useLLMO: boolean = false
 ): {
   credits: number;
@@ -112,12 +109,18 @@ export function calculateQuickTransformCredits(
   breakdown: string;
 } {
   const transcriptTokens = estimateTokens(transcript);
-  const credits = calculateCredits(transcriptTokens, format, { useStyleMatching, useLLMO });
   
-  const { outputTokens } = calculateTotalTokens(transcriptTokens, format, { useStyleMatching, useLLMO });
+  // Measure actual writing sample tokens if provided
+  const styleMatchingTokens = writingSamples.length > 0
+    ? writingSamples.reduce((sum, sample) => sum + estimateTokens(sample), 0)
+    : undefined;
+  
+  const credits = calculateCredits(transcriptTokens, format, { styleMatchingTokens, useLLMO });
+  
+  const { outputTokens } = calculateTotalTokens(transcriptTokens, format, { styleMatchingTokens, useLLMO });
   
   let breakdown = `${format} transformation`;
-  if (useStyleMatching) breakdown += ' + style matching';
+  if (styleMatchingTokens) breakdown += ' + style matching';
   if (useLLMO) breakdown += ' + LLMO optimization';
   
   return {
@@ -135,7 +138,7 @@ export function calculateQuickTransformCredits(
 export function calculateStrategyGeneratorCredits(
   transcript: string,
   selectedFormats: TargetFormat[],
-  useStyleMatching: boolean = false,
+  writingSamples: string[] = [],
   useLLMO: boolean = false
 ): {
   totalCredits: number;
@@ -146,6 +149,12 @@ export function calculateStrategyGeneratorCredits(
   }[];
 } {
   const transcriptTokens = estimateTokens(transcript);
+  
+  // Measure actual writing sample tokens if provided
+  const styleMatchingTokens = writingSamples.length > 0
+    ? writingSamples.reduce((sum, sample) => sum + estimateTokens(sample), 0)
+    : undefined;
+  
   const breakdown: { step: string; credits: number; description: string }[] = [];
   
   // Step 1: Content Analysis
@@ -179,7 +188,7 @@ export function calculateStrategyGeneratorCredits(
   // Step 4: Content Generation (full transformation for each format, includes 15% buffer)
   let step4Credits = 0;
   selectedFormats.forEach(format => {
-    const formatCredits = calculateCredits(transcriptTokens, format, { useStyleMatching, useLLMO });
+    const formatCredits = calculateCredits(transcriptTokens, format, { styleMatchingTokens, useLLMO });
     step4Credits += formatCredits;
   });
   breakdown.push({
