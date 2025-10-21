@@ -493,6 +493,23 @@ export default function Home() {
             strategyId={strategyId}
             onComplete={handleStrategyComplete}
           />
+        ) : (extractMutation.isPending || strategyMutation.isPending) ? (
+          <div className="flex flex-col items-center justify-center py-24 space-y-6">
+            <div className="relative">
+              <div className="w-16 h-16 border-4 border-primary/20 rounded-full"></div>
+              <div className="absolute top-0 left-0 w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            </div>
+            <div className="text-center space-y-2">
+              <h3 className="text-xl font-semibold text-foreground">
+                {extractMutation.isPending ? 'Extracting transcript...' : 'Creating your strategy...'}
+              </h3>
+              <p className="text-sm text-muted-foreground max-w-md">
+                {extractMutation.isPending 
+                  ? 'Please wait while we extract the content from your media.'
+                  : 'Setting up your 5-step content strategy. This may take a moment.'}
+              </p>
+            </div>
+          </div>
         ) : !jobStatus ? (
           <div className="space-y-12">
             <div className="text-center space-y-4 max-w-3xl mx-auto">
