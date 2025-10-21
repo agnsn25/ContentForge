@@ -134,7 +134,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/subscription/estimate', async (req, res) => {
+  app.post('/api/subscription/estimate', async (req: any, res) => {
     try {
       const { transcript, format, useStyleMatching, useLLMO, type, selectedFormats } = req.body;
 
@@ -142,28 +142,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Transcript is required' });
       }
 
+      let estimateResult;
+      let creditsRequired;
+
       if (type === 'strategy_generator') {
-        const formats = selectedFormats || ['newsletter', 'social', 'blog'];
-        const estimate = calculateStrategyGeneratorCredits(
+        const formats = selectedFormats || ['newsletter', 'social', 'blog', 'x'];
+        estimateResult = calculateStrategyGeneratorCredits(
           transcript,
           formats,
           useStyleMatching || false,
           useLLMO || false
         );
-        return res.json(estimate);
+        creditsRequired = estimateResult.totalCredits;
       } else {
         // Quick transform
         if (!format) {
           return res.status(400).json({ error: 'Format is required for quick transform' });
         }
-        const estimate = calculateQuickTransformCredits(
+        estimateResult = calculateQuickTransformCredits(
           transcript,
           format as TargetFormat,
           useStyleMatching || false,
           useLLMO || false
         );
-        return res.json(estimate);
+        creditsRequired = estimateResult.credits;
       }
+
+      // Check if user has sufficient credits
+      let hasSufficientCredits = true;
+      let creditsRemaining = null;
+
+      if (req.user) {
+        const userId = req.user.claims.sub;
+        const subscription = await storage.getUserSubscription(userId);
+        
+        if (subscription) {
+          const creditsUsed = parseInt(subscription.creditsUsed);
+          const creditsTotal = parseInt(subscription.creditsTotal);
+          creditsRemaining = creditsTotal - creditsUsed;
+          hasSufficientCredits = creditsRemaining >= creditsRequired;
+        }
+      }
+
+      return res.json({
+        ...estimateResult,
+        hasSufficientCredits,
+        creditsRemaining,
+        creditsRequired,
+      });
     } catch (error) {
       console.error("Error estimating credits:", error);
       res.status(500).json({ message: "Failed to estimate credits" });
