@@ -142,6 +142,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Transcript is required' });
       }
 
+      // Fetch writing samples if style matching is enabled
+      let writingSampleContents: string[] = [];
+      if (useStyleMatching && req.user) {
+        const userId = req.user.claims.sub;
+        const samples = await storage.getUserWritingSamples(userId);
+        writingSampleContents = samples.map(s => s.content);
+      }
+
       let estimateResult;
       let creditsRequired;
 
@@ -150,7 +158,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         estimateResult = calculateStrategyGeneratorCredits(
           transcript,
           formats,
-          useStyleMatching || false,
+          writingSampleContents,
           useLLMO || false
         );
         creditsRequired = estimateResult.totalCredits;
@@ -162,7 +170,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         estimateResult = calculateQuickTransformCredits(
           transcript,
           format as TargetFormat,
-          useStyleMatching || false,
+          writingSampleContents,
           useLLMO || false
         );
         creditsRequired = estimateResult.credits;
@@ -309,12 +317,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
+        // Fetch writing samples if style matching is enabled
+        let writingSampleContents: string[] = [];
+        if (useStyleMatching === 'true') {
+          const samples = await storage.getUserWritingSamples(userId);
+          writingSampleContents = samples.map(s => s.content);
+        }
+
         // Calculate credits needed
         const { credits: creditsNeeded, transcriptTokens, estimatedOutputTokens, breakdown } = 
           calculateQuickTransformCredits(
             transcript,
             targetFormat as TargetFormat,
-            useStyleMatching === 'true',
+            writingSampleContents,
             useLLMO === 'true'
           );
 
@@ -563,11 +578,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
+        // Fetch writing samples if style matching is enabled
+        let writingSampleContents: string[] = [];
+        if (job.useStyleMatching === 'true') {
+          const samples = await storage.getUserWritingSamples(job.userId);
+          writingSampleContents = samples.map(s => s.content);
+        }
+
         // Calculate credits needed for the entire strategy
         const { totalCredits, breakdown } = calculateStrategyGeneratorCredits(
           job.transcript,
           selectedFormats,
-          job.useStyleMatching === 'true',
+          writingSampleContents,
           job.useLLMO === 'true'
         );
 
