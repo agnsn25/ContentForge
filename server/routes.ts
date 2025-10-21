@@ -382,7 +382,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Strategy Generator Routes
   app.post('/api/strategy/start', upload.single('file'), async (req: any, res) => {
     try {
-      const { sourceType, url, useStyleMatching, useLLMO } = req.body;
+      const { sourceType, url, useStyleMatching, useLLMO, transcript: preExtractedTranscript, sourceInfo: preExtractedSourceInfo } = req.body;
       const file = req.file;
       const userId = req.user?.claims?.sub || null;
 
@@ -390,19 +390,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let sourceUrl = '';
       let fileName = '';
 
-      if (sourceType === 'file' && file) {
-        transcript = await extractTextFromFile(file);
-        fileName = file.originalname;
-      } else if (sourceType === 'youtube' && url) {
-        const result = await getYoutubeTranscript(url);
-        transcript = result.transcript;
-        sourceUrl = url;
-      } else if (sourceType === 'spotify' && url) {
-        const result = await getSpotifyTranscript(url);
-        transcript = result.transcript;
-        sourceUrl = url;
+      // If transcript is already provided (from extract-transcript), use it
+      if (preExtractedTranscript) {
+        transcript = preExtractedTranscript;
+        fileName = preExtractedSourceInfo || 'Pre-extracted content';
+        sourceUrl = url || '';
       } else {
-        return res.status(400).json({ error: 'Invalid source type or missing data' });
+        // Otherwise, extract transcript based on source type
+        if (sourceType === 'file' && file) {
+          transcript = await extractTextFromFile(file);
+          fileName = file.originalname;
+        } else if (sourceType === 'youtube' && url) {
+          const result = await getYoutubeTranscript(url);
+          transcript = result.transcript;
+          sourceUrl = url;
+        } else if (sourceType === 'spotify' && url) {
+          const result = await getSpotifyTranscript(url);
+          transcript = result.transcript;
+          sourceUrl = url;
+        } else {
+          return res.status(400).json({ error: 'Invalid source type or missing data' });
+        }
       }
 
       const job = await storage.createStrategyJob({

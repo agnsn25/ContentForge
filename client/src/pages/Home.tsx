@@ -45,12 +45,19 @@ export default function Home() {
   const [strategyId, setStrategyId] = useState<string | null>(null);
   const [completedStrategy, setCompletedStrategy] = useState<StrategyJob | null>(null);
 
+  // Cost preview state
+  const [showCostDialog, setShowCostDialog] = useState(false);
+  const [costEstimate, setCostEstimate] = useState<any>(null);
+  const [extractedTranscript, setExtractedTranscript] = useState<string>('');
+  const [extractedSourceInfo, setExtractedSourceInfo] = useState<string>('');
+  const [pendingUploadData, setPendingUploadData] = useState<any>(null);
+
   const { data: writingSamples = [] } = useQuery<WritingSample[]>({
     queryKey: ['/api/writing-samples'],
     enabled: !!user,
   });
 
-  const { data: subscriptionData } = useQuery<{ hasSubscription: boolean; subscription?: { plan: string; creditsRemaining: number } }>({
+  const { data: subscriptionData, refetch: refetchSubscription } = useQuery<{ hasSubscription: boolean; subscription?: { plan: string; creditsRemaining: number } }>({
     queryKey: ['/api/subscription'],
     enabled: !!user,
   });
@@ -89,7 +96,7 @@ export default function Home() {
   }, []);
 
   const uploadMutation = useMutation({
-    mutationFn: async (data: { file?: File; url?: string; type?: 'youtube' | 'spotify'; format: TargetFormat; useStyleMatching?: boolean; useLLMO?: boolean }) => {
+    mutationFn: async (data: { file?: File; url?: string; type?: 'youtube' | 'spotify'; format: TargetFormat; useStyleMatching?: boolean; useLLMO?: boolean; transcript?: string; sourceInfo?: string }) => {
       const formData = new FormData();
       
       if (data.file) {
@@ -98,6 +105,12 @@ export default function Home() {
       } else if (data.url) {
         formData.append('url', data.url);
         formData.append('sourceType', data.type || 'youtube');
+      }
+      
+      // If transcript is pre-extracted, include it
+      if (data.transcript) {
+        formData.append('transcript', data.transcript);
+        formData.append('sourceInfo', data.sourceInfo || '');
       }
       
       formData.append('targetFormat', data.format);
@@ -145,6 +158,8 @@ export default function Home() {
           setProgress(100);
           setJobStatus('completed');
           setTransformedContent(JSON.parse(result.transformedContent));
+          // Refresh subscription to update credits badge
+          refetchSubscription();
         } else if (result.status === 'error') {
           clearInterval(interval);
           setJobStatus('error');
@@ -158,27 +173,8 @@ export default function Home() {
     }, 2000);
   };
 
-  const handleFileSelect = (file: File) => {
-    if (!selectedFormat) {
-      setError('Please select an output format first');
-      return;
-    }
-    
-    setError(null);
-    uploadMutation.mutate({ file, format: selectedFormat, useStyleMatching, useLLMO });
-  };
-
-  const handleLinkSubmit = (url: string, type: 'youtube' | 'spotify') => {
-    if (!selectedFormat) {
-      setError('Please select an output format first');
-      return;
-    }
-    
-    setError(null);
-    uploadMutation.mutate({ url, type, format: selectedFormat, useStyleMatching, useLLMO });
-  };
-
-  const strategyMutation = useMutation({
+  // Extract transcript mutation (for cost preview)
+  const extractMutation = useMutation({
     mutationFn: async (data: { file?: File; url?: string; type?: 'youtube' | 'spotify' }) => {
       const formData = new FormData();
       
@@ -188,6 +184,101 @@ export default function Home() {
       } else if (data.url) {
         formData.append('url', data.url);
         formData.append('sourceType', data.type || 'youtube');
+      }
+
+      const response = await fetch('/api/extract-transcript', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to extract transcript');
+      }
+
+      return response.json();
+    },
+    onSuccess: async (data, variables) => {
+      // Store extracted transcript
+      setExtractedTranscript(data.transcript);
+      setExtractedSourceInfo(data.sourceInfo);
+      setPendingUploadData(variables);
+
+      // Calculate cost estimate
+      if (mode === 'quick' && selectedFormat) {
+        const estimate = await apiRequest('POST', '/api/credits/estimate', {
+          transcript: data.transcript,
+          format: selectedFormat,
+          useStyleMatching,
+          useLLMO,
+        }).then(r => r.json());
+        
+        setCostEstimate(estimate);
+        setShowCostDialog(true);
+      } else if (mode === 'strategy') {
+        // For strategy, we'll show total cost in a dialog
+        // This will be calculated once user selects formats
+        // For now, just start the strategy
+        confirmStrategy(data.transcript, data.sourceInfo);
+      }
+    },
+    onError: (err: any) => {
+      setError(err.message);
+    },
+  });
+
+  const handleFileSelect = (file: File) => {
+    if (!selectedFormat) {
+      setError('Please select an output format first');
+      return;
+    }
+    
+    setError(null);
+    extractMutation.mutate({ file });
+  };
+
+  const handleLinkSubmit = (url: string, type: 'youtube' | 'spotify') => {
+    if (!selectedFormat) {
+      setError('Please select an output format first');
+      return;
+    }
+    
+    setError(null);
+    extractMutation.mutate({ url, type });
+  };
+
+  const confirmTransform = () => {
+    if (!selectedFormat || !extractedTranscript) return;
+    
+    setShowCostDialog(false);
+    uploadMutation.mutate({ 
+      file: pendingUploadData?.file, 
+      url: pendingUploadData?.url,
+      type: pendingUploadData?.type,
+      format: selectedFormat, 
+      useStyleMatching, 
+      useLLMO,
+      transcript: extractedTranscript,
+      sourceInfo: extractedSourceInfo,
+    });
+  };
+
+  const strategyMutation = useMutation({
+    mutationFn: async (data: { file?: File; url?: string; type?: 'youtube' | 'spotify'; transcript?: string; sourceInfo?: string }) => {
+      const formData = new FormData();
+      
+      if (data.file) {
+        formData.append('file', data.file);
+        formData.append('sourceType', 'file');
+      } else if (data.url) {
+        formData.append('url', data.url);
+        formData.append('sourceType', data.type || 'youtube');
+      }
+
+      // If transcript is pre-extracted, include it
+      if (data.transcript) {
+        formData.append('transcript', data.transcript);
+        formData.append('sourceInfo', data.sourceInfo || '');
       }
       
       formData.append('useStyleMatching', useStyleMatching.toString());
@@ -215,12 +306,22 @@ export default function Home() {
 
   const handleFileSelectStrategy = (file: File) => {
     setError(null);
-    strategyMutation.mutate({ file });
+    extractMutation.mutate({ file });
   };
 
   const handleLinkSubmitStrategy = (url: string, type: 'youtube' | 'spotify') => {
     setError(null);
-    strategyMutation.mutate({ url, type });
+    extractMutation.mutate({ url, type });
+  };
+
+  const confirmStrategy = (transcript: string, sourceInfo: string) => {
+    strategyMutation.mutate({ 
+      transcript, 
+      sourceInfo,
+      file: pendingUploadData?.file,
+      url: pendingUploadData?.url,
+      type: pendingUploadData?.type,
+    });
   };
 
   const handleStrategyComplete = async () => {
@@ -228,6 +329,8 @@ export default function Home() {
       const response = await apiRequest('GET', `/api/strategy/${strategyId}`);
       const strategy = await response.json();
       setCompletedStrategy(strategy);
+      // Refresh subscription to update credits badge
+      refetchSubscription();
     }
   };
 
@@ -708,6 +811,16 @@ export default function Home() {
           </div>
         </div>
       </footer>
+
+      {/* Cost Confirmation Dialog */}
+      <CostConfirmationDialog
+        open={showCostDialog}
+        onClose={() => setShowCostDialog(false)}
+        onConfirm={confirmTransform}
+        estimate={costEstimate}
+        creditsRemaining={subscriptionData?.subscription?.creditsRemaining || 0}
+        isPending={uploadMutation.isPending}
+      />
     </div>
   );
 }
