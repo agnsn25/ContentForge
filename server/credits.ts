@@ -6,31 +6,32 @@ import type { TargetFormat } from "@shared/schema";
  * Pricing model:
  * - 1 credit = 1,000 tokens of total usage (input + output)
  * - Base costs vary by format based on typical output lengths
- * - Modifiers: +20% for style matching, +80% for LLMO optimization
+ * - All estimates include 15% safety buffer to protect margins from Grok variance
+ * - Users are charged the ESTIMATE amount (fixed price), not actual usage
  */
 
-// Estimated output tokens by format
+// Estimated output tokens by format (with 15% safety buffer)
 const FORMAT_OUTPUT_TOKENS: Record<TargetFormat, number> = {
-  newsletter: 700,   // 400-600 words ≈ 500-800 tokens
-  social: 700,       // 8-10 slides ≈ 600-800 tokens
-  blog: 1400,        // 800-1200 words ≈ 1000-1600 tokens
-  x: 500,            // 8-12 tweets ≈ 400-600 tokens
+  newsletter: 805,   // Base: 700 tokens → 805 with 15% buffer
+  social: 805,       // Base: 700 tokens → 805 with 15% buffer
+  blog: 1610,        // Base: 1400 tokens → 1610 with 15% buffer
+  x: 575,            // Base: 500 tokens → 575 with 15% buffer
 };
 
-// System prompt overhead tokens by format
+// System prompt overhead tokens by format (with 15% safety buffer)
 const FORMAT_SYSTEM_TOKENS: Record<TargetFormat, number> = {
-  newsletter: 500,
-  social: 500,
-  blog: 500,
-  x: 500,
+  newsletter: 575,   // Base: 500 → 575 with 15% buffer
+  social: 575,
+  blog: 575,
+  x: 575,
 };
 
-// LLMO adds extra output tokens for metadata
-const LLMO_EXTRA_OUTPUT_TOKENS = 1200;
-const LLMO_EXTRA_SYSTEM_TOKENS = 500;
+// LLMO adds extra output tokens for metadata (with 15% safety buffer)
+const LLMO_EXTRA_OUTPUT_TOKENS = 1380;  // Base: 1200 → 1380 with 15% buffer
+const LLMO_EXTRA_SYSTEM_TOKENS = 575;   // Base: 500 → 575 with 15% buffer
 
-// Writing style matching adds user samples to input
-const STYLE_MATCHING_EXTRA_TOKENS = 2100; // ~2 samples × 800 words
+// Writing style matching adds user samples to input (with 15% safety buffer)
+const STYLE_MATCHING_EXTRA_TOKENS = 2415; // Base: 2100 → 2415 with 15% buffer
 
 /**
  * Estimate transcript tokens from text
@@ -147,8 +148,8 @@ export function calculateStrategyGeneratorCredits(
   const transcriptTokens = estimateTokens(transcript);
   const breakdown: { step: string; credits: number; description: string }[] = [];
   
-  // Step 1: Content Analysis (~500 output tokens)
-  const step1Tokens = transcriptTokens + 500 + 500; // transcript + system + output
+  // Step 1: Content Analysis (with 15% safety buffer)
+  const step1Tokens = transcriptTokens + 575 + 575; // transcript + system + output (padded)
   const step1Credits = Math.ceil(step1Tokens / 1000);
   breakdown.push({
     step: 'Step 1',
@@ -156,8 +157,8 @@ export function calculateStrategyGeneratorCredits(
     description: 'Content Analysis',
   });
   
-  // Step 2: Format Recommendations (~400 output tokens for all 4 formats)
-  const step2Tokens = transcriptTokens + 500 + 400;
+  // Step 2: Format Recommendations (with 15% safety buffer)
+  const step2Tokens = transcriptTokens + 575 + 460; // system + output (padded)
   const step2Credits = Math.ceil(step2Tokens / 1000);
   breakdown.push({
     step: 'Step 2',
@@ -165,9 +166,9 @@ export function calculateStrategyGeneratorCredits(
     description: 'Format Recommendations',
   });
   
-  // Step 3: Title Generation (~300 output tokens per format)
-  const step3OutputTokens = selectedFormats.length * 300;
-  const step3Tokens = transcriptTokens + 500 + step3OutputTokens;
+  // Step 3: Title Generation (with 15% safety buffer)
+  const step3OutputTokens = selectedFormats.length * 345; // 300 → 345 per format with buffer
+  const step3Tokens = transcriptTokens + 575 + step3OutputTokens;
   const step3Credits = Math.ceil(step3Tokens / 1000);
   breakdown.push({
     step: 'Step 3',
@@ -175,7 +176,7 @@ export function calculateStrategyGeneratorCredits(
     description: 'Title Generation',
   });
   
-  // Step 4: Content Generation (full transformation for each format)
+  // Step 4: Content Generation (full transformation for each format, includes 15% buffer)
   let step4Credits = 0;
   selectedFormats.forEach(format => {
     const formatCredits = calculateCredits(transcriptTokens, format, { useStyleMatching, useLLMO });
@@ -187,8 +188,8 @@ export function calculateStrategyGeneratorCredits(
     description: `Content Generation (${selectedFormats.length} formats)`,
   });
   
-  // Step 5: Publishing Calendar (~600 output tokens)
-  const step5Tokens = transcriptTokens + 500 + 600;
+  // Step 5: Publishing Calendar (with 15% safety buffer)
+  const step5Tokens = transcriptTokens + 575 + 690; // system + output (padded)
   const step5Credits = Math.ceil(step5Tokens / 1000);
   breakdown.push({
     step: 'Step 5',
