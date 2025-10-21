@@ -132,7 +132,7 @@ export default function UploadZone({ onFileSelect, onLinkSubmit }: UploadZonePro
 
             <div className="flex gap-2 w-full max-w-md mt-2">
               <Input
-                type="url"
+                type="text"
                 placeholder="https://youtube.com/watch?v=... or https://open.spotify.com/..."
                 value={linkUrl}
                 onChange={(e) => setLinkUrl(e.target.value)}
