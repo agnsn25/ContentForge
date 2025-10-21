@@ -148,8 +148,8 @@ export function calculateStrategyGeneratorCredits(
   const transcriptTokens = estimateTokens(transcript);
   const breakdown: { step: string; credits: number; description: string }[] = [];
   
-  // Step 1: Content Analysis (with 15% safety buffer)
-  const step1Tokens = transcriptTokens + 575 + 575; // transcript + system + output (padded)
+  // Step 1: Content Analysis
+  const step1Tokens = transcriptTokens + 500 + 575; // transcript + system (known) + output (padded)
   const step1Credits = Math.ceil(step1Tokens / 1000);
   breakdown.push({
     step: 'Step 1',
@@ -157,8 +157,8 @@ export function calculateStrategyGeneratorCredits(
     description: 'Content Analysis',
   });
   
-  // Step 2: Format Recommendations (with 15% safety buffer)
-  const step2Tokens = transcriptTokens + 575 + 460; // system + output (padded)
+  // Step 2: Format Recommendations
+  const step2Tokens = transcriptTokens + 500 + 460; // system (known) + output (padded)
   const step2Credits = Math.ceil(step2Tokens / 1000);
   breakdown.push({
     step: 'Step 2',
@@ -166,9 +166,9 @@ export function calculateStrategyGeneratorCredits(
     description: 'Format Recommendations',
   });
   
-  // Step 3: Title Generation (with 15% safety buffer)
-  const step3OutputTokens = selectedFormats.length * 345; // 300 → 345 per format with buffer
-  const step3Tokens = transcriptTokens + 575 + step3OutputTokens;
+  // Step 3: Title Generation
+  const step3OutputTokens = selectedFormats.length * 345; // 300 → 345 per format with 15% buffer
+  const step3Tokens = transcriptTokens + 500 + step3OutputTokens; // system (known) + output (padded)
   const step3Credits = Math.ceil(step3Tokens / 1000);
   breakdown.push({
     step: 'Step 3',
@@ -188,8 +188,8 @@ export function calculateStrategyGeneratorCredits(
     description: `Content Generation (${selectedFormats.length} formats)`,
   });
   
-  // Step 5: Publishing Calendar (with 15% safety buffer)
-  const step5Tokens = transcriptTokens + 575 + 690; // system + output (padded)
+  // Step 5: Publishing Calendar
+  const step5Tokens = transcriptTokens + 500 + 690; // system (known) + output (padded)
   const step5Credits = Math.ceil(step5Tokens / 1000);
   breakdown.push({
     step: 'Step 5',
