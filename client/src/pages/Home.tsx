@@ -9,6 +9,7 @@ import ProcessingIndicator from '@/components/ProcessingIndicator';
 import ContentPreview from '@/components/ContentPreview';
 import StrategyWizard from '@/components/StrategyWizard';
 import StrategyPreview from '@/components/StrategyPreview';
+import CostConfirmationDialog from '@/components/CostConfirmationDialog';
 import ThemeToggle from '@/components/ThemeToggle';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
