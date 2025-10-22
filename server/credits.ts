@@ -155,58 +155,39 @@ export function calculateStrategyGeneratorCredits(
     ? writingSamples.reduce((sum, sample) => sum + estimateTokens(sample), 0)
     : undefined;
   
-  const breakdown: { step: string; credits: number; description: string }[] = [];
+  // Calculate total tokens for all steps (sum first, round once at the end)
+  let totalTokens = 0;
   
   // Step 1: Content Analysis
   const step1Tokens = transcriptTokens + 500 + 575; // transcript + system (known) + output (padded)
-  const step1Credits = Math.ceil(step1Tokens / 1000);
-  breakdown.push({
-    step: 'Step 1',
-    credits: step1Credits,
-    description: 'Content Analysis',
-  });
+  totalTokens += step1Tokens;
   
   // Step 2: Format Recommendations
   const step2Tokens = transcriptTokens + 500 + 460; // system (known) + output (padded)
-  const step2Credits = Math.ceil(step2Tokens / 1000);
-  breakdown.push({
-    step: 'Step 2',
-    credits: step2Credits,
-    description: 'Format Recommendations',
-  });
+  totalTokens += step2Tokens;
   
   // Step 3: Title Generation
   const step3OutputTokens = selectedFormats.length * 345; // 300 → 345 per format with 15% buffer
   const step3Tokens = transcriptTokens + 500 + step3OutputTokens; // system (known) + output (padded)
-  const step3Credits = Math.ceil(step3Tokens / 1000);
-  breakdown.push({
-    step: 'Step 3',
-    credits: step3Credits,
-    description: 'Title Generation',
-  });
+  totalTokens += step3Tokens;
   
   // Step 4: Content Generation (full transformation for each format, includes 15% buffer)
-  let step4Credits = 0;
+  let step4Tokens = 0;
   selectedFormats.forEach(format => {
-    const formatCredits = calculateCredits(transcriptTokens, format, { styleMatchingTokens, useLLMO });
-    step4Credits += formatCredits;
+    const { totalTokens: formatTokens } = calculateTotalTokens(transcriptTokens, format, { styleMatchingTokens, useLLMO });
+    step4Tokens += formatTokens;
   });
-  breakdown.push({
-    step: 'Step 4',
-    credits: step4Credits,
-    description: `Content Generation (${selectedFormats.length} formats)`,
-  });
+  totalTokens += step4Tokens;
   
   // Step 5: Publishing Calendar
   const step5Tokens = transcriptTokens + 500 + 690; // system (known) + output (padded)
-  const step5Credits = Math.ceil(step5Tokens / 1000);
-  breakdown.push({
-    step: 'Step 5',
-    credits: step5Credits,
-    description: 'Publishing Strategy',
-  });
+  totalTokens += step5Tokens;
   
-  const totalCredits = breakdown.reduce((sum, item) => sum + item.credits, 0);
+  // Round once at the end (fairer pricing, no over-rounding)
+  const totalCredits = Math.ceil(totalTokens / 1000);
+  
+  // Note: breakdown is no longer returned to frontend, but kept for internal logging if needed
+  const breakdown: { step: string; credits: number; description: string }[] = [];
   
   return {
     totalCredits,
