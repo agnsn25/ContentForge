@@ -8,31 +8,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Coins, TrendingDown, Info } from "lucide-react";
-
-interface QuickTransformBreakdown {
-  baseFormatCredits: number;
-  styleMatchingMultiplier?: number;
-  llmoMultiplier?: number;
-  totalMultiplier: number;
-}
-
-interface StrategyStepBreakdown {
-  step: string;
-  credits: number;
-  description: string;
-}
+import { Coins, TrendingDown } from "lucide-react";
 
 interface QuickTransformEstimate {
   credits: number;
-  transcriptTokens: number;
-  estimatedOutputTokens: number;
-  breakdown: QuickTransformBreakdown;
 }
 
 interface StrategyGeneratorEstimate {
   totalCredits: number;
-  breakdown: StrategyStepBreakdown[];
 }
 
 type CreditEstimate = QuickTransformEstimate | StrategyGeneratorEstimate;
@@ -47,7 +30,7 @@ interface CostConfirmationDialogProps {
 }
 
 function isStrategyEstimate(estimate: CreditEstimate): estimate is StrategyGeneratorEstimate {
-  return 'totalCredits' in estimate && Array.isArray((estimate as any).breakdown);
+  return 'totalCredits' in estimate;
 }
 
 export default function CostConfirmationDialog({
@@ -75,72 +58,14 @@ export default function CostConfirmationDialog({
           </AlertDialogTitle>
           <AlertDialogDescription>
             {isStrategy ? (
-              <>This strategy will cost {totalCredits} credits for all 5 steps.</>
+              <>This strategy will cost <strong>{totalCredits} credits</strong> for all 5 steps.</>
             ) : (
-              <>This transformation will cost {totalCredits} credits.</>
+              <>This transformation will cost <strong>{totalCredits} credits</strong>.</>
             )}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         <div className="space-y-4 py-4">
-          {isStrategy && (
-            <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3 flex items-start gap-3">
-              <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-blue-900 dark:text-blue-100">
-                This estimate is for all 4 content formats. Your actual cost will be lower if you select fewer formats in Step 2.
-              </p>
-            </div>
-          )}
-          <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-            {isStrategy ? (
-              <>
-                {estimate.breakdown.map((step, index) => (
-                  <div key={index} className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{step.description}</span>
-                    <span className="font-medium">{step.credits} credits</span>
-                  </div>
-                ))}
-                <div className="h-px bg-border" />
-                <div className="flex justify-between font-semibold">
-                  <span>Total Cost</span>
-                  <span className="text-primary">{totalCredits} credits</span>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Base cost</span>
-                  <span className="font-medium">{estimate.breakdown.baseFormatCredits} credits</span>
-                </div>
-                
-                {estimate.breakdown.styleMatchingMultiplier && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Style Matching (+20%)</span>
-                    <span className="font-medium">
-                      ×{estimate.breakdown.styleMatchingMultiplier.toFixed(2)}
-                    </span>
-                  </div>
-                )}
-                
-                {estimate.breakdown.llmoMultiplier && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">LLMO Optimization (+80%)</span>
-                    <span className="font-medium">
-                      ×{estimate.breakdown.llmoMultiplier.toFixed(2)}
-                    </span>
-                  </div>
-                )}
-                
-                <div className="h-px bg-border" />
-                
-                <div className="flex justify-between font-semibold">
-                  <span>Total Cost</span>
-                  <span className="text-primary">{totalCredits} credits</span>
-                </div>
-              </>
-            )}
-          </div>
-
           <div className="bg-muted/30 rounded-lg p-4 space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Current Balance</span>
@@ -171,17 +96,6 @@ export default function CostConfirmationDialog({
                   Please upgrade your plan or wait for your credits to reset.
                 </p>
               </div>
-            </div>
-          )}
-
-          {!isStrategy && (
-            <div className="text-xs text-muted-foreground">
-              <p>
-                <strong>Transcript:</strong> ~{estimate.transcriptTokens.toLocaleString()} tokens
-              </p>
-              <p>
-                <strong>Est. Output:</strong> ~{estimate.estimatedOutputTokens.toLocaleString()} tokens
-              </p>
             </div>
           )}
         </div>
