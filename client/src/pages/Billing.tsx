@@ -91,67 +91,11 @@ export default function Billing() {
     );
   }
 
-  if (!billingData?.subscription) {
-    return (
-      <div className="min-h-screen bg-background">
-        <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <img src={logoUrl} alt="ContentHammer Logo" className="h-8 w-auto" data-testid="icon-logo" />
-              <h1 className="text-xl font-bold text-foreground" data-testid="text-app-name">ContentHammer</h1>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <Link href="/">
-                <Button variant="ghost" size="sm" data-testid="button-home">
-                  <Home className="h-4 w-4 mr-2" />
-                  Home
-                </Button>
-              </Link>
-              <ThemeToggle />
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative" size="icon" data-testid="button-user-menu">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={user?.profileImageUrl || ""} alt={user?.firstName || "User"} />
-                      <AvatarFallback>{user?.firstName?.[0] || "U"}</AvatarFallback>
-                    </Avatar>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <a href="/api/logout" data-testid="link-logout">
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Logout
-                    </a>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-        </header>
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <Card>
-            <CardHeader>
-              <CardTitle>No Active Subscription</CardTitle>
-              <CardDescription>You don't have an active subscription yet.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Link href="/pricing">
-                <Button data-testid="button-view-plans">View Plans</Button>
-              </Link>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
-  const { subscription, recentTransactions, creditPurchases } = billingData;
-  const usagePercentage = (subscription.creditsUsed / subscription.creditsTotal) * 100;
+  const hasSubscription = billingData?.subscription;
+  const subscription = hasSubscription ? billingData.subscription : null;
+  const recentTransactions = billingData?.recentTransactions || [];
+  const creditPurchases = billingData?.creditPurchases || [];
+  const usagePercentage = subscription ? (subscription.creditsUsed / subscription.creditsTotal) * 100 : 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -197,10 +141,29 @@ export default function Billing() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2" data-testid="text-page-title">Billing & Usage</h1>
-          <p className="text-muted-foreground">Manage your subscription, credits, and billing information</p>
+          <p className="text-muted-foreground">
+            {hasSubscription 
+              ? "Manage your subscription, credits, and billing information" 
+              : "Purchase credits to start transforming your content"}
+          </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
+        {!hasSubscription && (
+          <Card className="mb-8" data-testid="card-no-subscription">
+            <CardHeader>
+              <CardTitle>No Active Subscription</CardTitle>
+              <CardDescription>Subscribe to get monthly credits or purchase one-time credit packages below</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Link href="/pricing">
+                <Button data-testid="button-view-plans">View Subscription Plans</Button>
+              </Link>
+            </CardContent>
+          </Card>
+        )}
+
+        {hasSubscription && subscription && (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
           <Card data-testid="card-total-credits">
             <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Credits</CardTitle>
@@ -240,8 +203,10 @@ export default function Billing() {
             </CardContent>
           </Card>
         </div>
+        )}
 
-        <div className="grid gap-6 lg:grid-cols-2 mb-8">
+        {hasSubscription && subscription && (
+          <div className="grid gap-6 lg:grid-cols-2 mb-8">
           <Card data-testid="card-current-plan">
             <CardHeader>
               <CardTitle>Current Plan</CardTitle>
@@ -319,6 +284,7 @@ export default function Billing() {
             </CardContent>
           </Card>
         </div>
+        )}
 
         <Card data-testid="card-credit-packages">
           <CardHeader>
@@ -361,7 +327,7 @@ export default function Billing() {
           </CardContent>
         </Card>
 
-        {creditPurchases.length > 0 && (
+        {hasSubscription && creditPurchases.length > 0 && (
           <Card className="mt-6" data-testid="card-purchase-history">
             <CardHeader>
               <CardTitle>Purchase History</CardTitle>

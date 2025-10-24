@@ -418,7 +418,7 @@ export default function Home() {
               History
             </Button>
 
-            {user && subscriptionData?.hasSubscription && (
+            {user && (
               <Button
                 variant="ghost"
                 size="sm"
