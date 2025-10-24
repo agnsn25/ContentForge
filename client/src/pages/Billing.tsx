@@ -28,7 +28,8 @@ import {
   Package,
   Zap,
   History as HistoryIcon,
-  FileText
+  FileText,
+  Coins
 } from "lucide-react";
 import { format } from "date-fns";
 import logoUrl from "@assets/hammer-logo.png";
@@ -80,6 +81,11 @@ export default function Billing() {
 
   const { data: creditPackages = [], isLoading: isLoadingPackages } = useQuery<CreditPackage[]>({
     queryKey: ["/api/billing/packages"],
+  });
+
+  const { data: subscriptionData } = useQuery<{ hasSubscription: boolean; subscription?: { plan: string; creditsRemaining: number } }>({
+    queryKey: ['/api/subscription'],
+    enabled: !!user,
   });
 
   if (isLoading || isLoadingBilling) {
@@ -143,25 +149,60 @@ export default function Billing() {
             
             <ThemeToggle />
             
+            {user && subscriptionData?.hasSubscription && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.location.href = '/pricing'}
+                className="gap-2"
+                data-testid="button-credits-badge"
+              >
+                <Coins className="h-4 w-4" />
+                <span className="font-medium" data-testid="text-credits-remaining">
+                  {subscriptionData.subscription?.creditsRemaining || 0}
+                </span>
+                <Badge variant="secondary" className="text-xs" data-testid="text-subscription-tier">
+                  {subscriptionData.subscription?.plan || 'Unknown'}
+                </Badge>
+              </Button>
+            )}
+            
+            {user && !subscriptionData?.hasSubscription && (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => window.location.href = '/pricing'}
+                data-testid="button-upgrade-pricing"
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                Upgrade
+              </Button>
+            )}
+            
             {user && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="gap-2" data-testid="button-user-menu">
                     <Avatar className="h-7 w-7">
                       <AvatarImage src={user.profileImageUrl || undefined} />
-                      <AvatarFallback>{user.firstName?.[0] || "U"}</AvatarFallback>
+                      <AvatarFallback>
+                        {user.firstName?.[0] || user.email?.[0] || 'U'}
+                      </AvatarFallback>
                     </Avatar>
-                    <span className="hidden sm:inline-block">{user.firstName}</span>
+                    <span className="hidden sm:inline-block" data-testid="text-user-name">
+                      {user.firstName || user.email?.split('@')[0] || 'User'}
+                    </span>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel data-testid="text-user-email">{user.email}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <a href="/api/logout" data-testid="link-logout">
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Logout
-                    </a>
+                  <DropdownMenuItem 
+                    onClick={() => window.location.href = '/api/logout'}
+                    data-testid="button-logout"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
