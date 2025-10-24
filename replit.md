@@ -55,6 +55,19 @@ ContentHammer is a full-stack application built with React and TypeScript for th
         - Strategy Generator steps: Mix of exact system prompts (500) and padded AI outputs (575, 460, 345/format, 690)
     - **Hard Block:** No transformations allowed if insufficient credits; no override option
     - **Subscription Tiers:** Starter ($19/500 credits), Pro ($49/1,500 credits)
+    - **One-Time Credit Purchases:**
+        - Users can purchase credit packages that never expire
+        - Purchased credits are tracked separately from subscription credits in `oneTimeCredits` field
+        - Credit usage priority: One-time purchased credits are used first, then subscription credits
+        - Available packages: Starter Pack (100/$10), Creator Pack (500/$45), Pro Pack (1000/$85), Enterprise Pack (2500/$200)
+        - Purchase history tracked in `creditPurchases` table with payment details
+    - **Billing Dashboard:**
+        - Accessible at `/billing` for all authenticated users (with or without subscriptions)
+        - Shows credit breakdown: Total credits, subscription credits, and purchased credits
+        - Displays current plan details, usage statistics, and billing period
+        - Lists available credit packages for purchase
+        - Shows purchase history and recent activity
+        - Users without subscriptions can still purchase one-time credit packages
 - **Content History:** All transformations are saved to the database and linked to user accounts, accessible via a dedicated history page.
 - **Export Options:** Transformed content can be copied to the clipboard or downloaded as a Markdown file.
 
