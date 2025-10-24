@@ -119,13 +119,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const creditsUsed = parseInt(subscription.creditsUsed);
       const creditsTotal = parseInt(subscription.creditsTotal);
-      const creditsRemaining = calculateCreditsRemaining(creditsUsed, creditsTotal);
+      const oneTimeCredits = parseInt(subscription.oneTimeCredits);
+      const subscriptionCreditsRemaining = calculateCreditsRemaining(creditsUsed, creditsTotal);
+      const totalCreditsRemaining = subscriptionCreditsRemaining + oneTimeCredits;
 
       res.json({
         hasSubscription: true,
         subscription: {
           ...subscription,
-          creditsRemaining,
+          creditsRemaining: totalCreditsRemaining,
+          subscriptionCreditsRemaining,
+          oneTimeCreditsRemaining: oneTimeCredits,
         },
       });
     } catch (error) {
@@ -213,6 +217,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching credit transactions:", error);
       res.status(500).json({ message: "Failed to fetch credit transactions" });
+    }
+  });
+
+  // Billing routes
+  app.get('/api/billing/packages', async (_req, res) => {
+    try {
+      const packages = await storage.getActiveCreditPackages();
+      res.json(packages);
+    } catch (error) {
+      console.error("Error fetching credit packages:", error);
+      res.status(500).json({ message: "Failed to fetch credit packages" });
+    }
+  });
+
+  app.get('/api/billing/dashboard', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      const subscription = await storage.getUserSubscription(userId);
+      const transactions = await storage.getUserCreditTransactions(userId, 10);
+      const purchases = await storage.getUserCreditPurchases(userId);
+
+      if (!subscription) {
+        return res.json({
+          hasSubscription: false,
+          message: 'No active subscription',
+        });
+      }
+
+      const creditsUsed = parseInt(subscription.creditsUsed);
+      const creditsTotal = parseInt(subscription.creditsTotal);
+      const oneTimeCredits = parseInt(subscription.oneTimeCredits);
+      const subscriptionCreditsRemaining = calculateCreditsRemaining(creditsUsed, creditsTotal);
+      const totalCreditsRemaining = subscriptionCreditsRemaining + oneTimeCredits;
+
+      const planDetails = PLAN_DETAILS[subscription.plan as keyof typeof PLAN_DETAILS];
+
+      res.json({
+        subscription: {
+          ...subscription,
+          plan: subscription.plan,
+          planDetails,
+          creditsTotal,
+          creditsUsed,
+          subscriptionCreditsRemaining,
+          oneTimeCreditsRemaining: oneTimeCredits,
+          totalCreditsRemaining,
+        },
+        recentTransactions: transactions,
+        creditPurchases: purchases,
+      });
+    } catch (error) {
+      console.error("Error fetching billing dashboard:", error);
+      res.status(500).json({ message: "Failed to fetch billing dashboard" });
     }
   });
 
