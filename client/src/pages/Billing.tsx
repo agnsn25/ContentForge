@@ -26,7 +26,9 @@ import {
   LogOut,
   DollarSign,
   Package,
-  Zap
+  Zap,
+  History as HistoryIcon,
+  FileText
 } from "lucide-react";
 import { format } from "date-fns";
 import logoUrl from "@assets/hammer-logo.png";
@@ -107,33 +109,63 @@ export default function Billing() {
           </div>
 
           <div className="flex items-center gap-4">
-            <Link href="/">
-              <Button variant="ghost" size="sm" data-testid="button-home">
-                <Home className="h-4 w-4 mr-2" />
-                Home
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => window.location.href = '/'}
+              data-testid="button-home-nav"
+            >
+              <Home className="h-4 w-4 mr-2" />
+              Home
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => window.location.href = '/history'}
+              data-testid="button-history-nav"
+            >
+              <HistoryIcon className="h-4 w-4 mr-2" />
+              History
+            </Button>
+
+            {user && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => window.location.href = '/writing-samples'}
+                data-testid="button-writing-samples-nav"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Writing Samples
               </Button>
-            </Link>
+            )}
+            
             <ThemeToggle />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative" size="icon" data-testid="button-user-menu">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={user?.profileImageUrl || ""} alt={user?.firstName || "User"} />
-                    <AvatarFallback>{user?.firstName?.[0] || "U"}</AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <a href="/api/logout" data-testid="link-logout">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Logout
-                  </a>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            
+            {user && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="gap-2" data-testid="button-user-menu">
+                    <Avatar className="h-7 w-7">
+                      <AvatarImage src={user.profileImageUrl || undefined} />
+                      <AvatarFallback>{user.firstName?.[0] || "U"}</AvatarFallback>
+                    </Avatar>
+                    <span className="hidden sm:inline-block">{user.firstName}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <a href="/api/logout" data-testid="link-logout">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Logout
+                    </a>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
       </header>
