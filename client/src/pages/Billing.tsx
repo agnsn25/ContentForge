@@ -372,14 +372,14 @@ export default function Billing() {
                 <Sparkles className="h-6 w-6 animate-pulse text-primary" />
               </div>
             ) : (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 items-start">
                 {creditPackages.map((pkg) => (
-                  <Card key={pkg.id} className="hover-elevate" data-testid={`package-${pkg.id}`}>
-                    <CardHeader className="min-h-[100px]">
+                  <Card key={pkg.id} className="hover-elevate flex flex-col" data-testid={`package-${pkg.id}`}>
+                    <CardHeader className="h-[100px] flex-shrink-0">
                       <CardTitle className="text-lg">{pkg.name}</CardTitle>
-                      <CardDescription className="text-xs">{pkg.description}</CardDescription>
+                      <CardDescription className="text-xs line-clamp-2">{pkg.description}</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-4 flex-1">
                       <div>
                         <div className="text-3xl font-bold">{pkg.credits}</div>
                         <div className="text-sm text-muted-foreground">credits</div>
