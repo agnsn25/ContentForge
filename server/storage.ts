@@ -11,12 +11,18 @@ import {
   type InsertSubscription,
   type CreditTransaction,
   type InsertCreditTransaction,
+  type CreditPackage,
+  type InsertCreditPackage,
+  type CreditPurchase,
+  type InsertCreditPurchase,
   contentJobs,
   users,
   writingSamples,
   strategyJobs,
   subscriptions,
-  creditTransactions
+  creditTransactions,
+  creditPackages,
+  creditPurchases
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
@@ -49,10 +55,20 @@ export interface IStorage {
   createSubscription(subscription: InsertSubscription): Promise<Subscription>;
   updateSubscription(id: string, updates: Partial<Subscription>): Promise<Subscription>;
   deductCredits(userId: string, amount: number): Promise<Subscription>;
+  addOneTimeCredits(userId: string, amount: number): Promise<Subscription>;
   
   // Credit transaction operations
   createCreditTransaction(transaction: InsertCreditTransaction): Promise<CreditTransaction>;
   getUserCreditTransactions(userId: string, limit?: number): Promise<CreditTransaction[]>;
+  
+  // Credit package operations
+  getCreditPackages(): Promise<CreditPackage[]>;
+  getActiveCreditPackages(): Promise<CreditPackage[]>;
+  createCreditPackage(pkg: InsertCreditPackage): Promise<CreditPackage>;
+  
+  // Credit purchase operations
+  createCreditPurchase(purchase: InsertCreditPurchase): Promise<CreditPurchase>;
+  getUserCreditPurchases(userId: string): Promise<CreditPurchase[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -234,11 +250,36 @@ export class DatabaseStorage implements IStorage {
       throw new Error('No active subscription found');
     }
 
+    const oneTimeCredits = parseInt(subscription.oneTimeCredits);
     const creditsUsed = parseInt(subscription.creditsUsed);
-    const newCreditsUsed = creditsUsed + amount;
+    
+    if (oneTimeCredits >= amount) {
+      return await this.updateSubscription(subscription.id, {
+        oneTimeCredits: (oneTimeCredits - amount).toString(),
+      });
+    } else {
+      const remainingToDeduct = amount - oneTimeCredits;
+      const newCreditsUsed = creditsUsed + remainingToDeduct;
+
+      return await this.updateSubscription(subscription.id, {
+        oneTimeCredits: '0',
+        creditsUsed: newCreditsUsed.toString(),
+      });
+    }
+  }
+
+  async addOneTimeCredits(userId: string, amount: number): Promise<Subscription> {
+    const subscription = await this.getUserSubscription(userId);
+    
+    if (!subscription) {
+      throw new Error('No active subscription found');
+    }
+
+    const currentOneTimeCredits = parseInt(subscription.oneTimeCredits);
+    const newOneTimeCredits = currentOneTimeCredits + amount;
 
     return await this.updateSubscription(subscription.id, {
-      creditsUsed: newCreditsUsed.toString(),
+      oneTimeCredits: newOneTimeCredits.toString(),
     });
   }
 
@@ -263,6 +304,45 @@ export class DatabaseStorage implements IStorage {
     }
     
     return await query;
+  }
+
+  async getCreditPackages(): Promise<CreditPackage[]> {
+    return await db
+      .select()
+      .from(creditPackages)
+      .orderBy(creditPackages.credits);
+  }
+
+  async getActiveCreditPackages(): Promise<CreditPackage[]> {
+    return await db
+      .select()
+      .from(creditPackages)
+      .where(eq(creditPackages.isActive, 'true'))
+      .orderBy(creditPackages.credits);
+  }
+
+  async createCreditPackage(insertPackage: InsertCreditPackage): Promise<CreditPackage> {
+    const [pkg] = await db
+      .insert(creditPackages)
+      .values(insertPackage)
+      .returning();
+    return pkg;
+  }
+
+  async createCreditPurchase(insertPurchase: InsertCreditPurchase): Promise<CreditPurchase> {
+    const [purchase] = await db
+      .insert(creditPurchases)
+      .values(insertPurchase)
+      .returning();
+    return purchase;
+  }
+
+  async getUserCreditPurchases(userId: string): Promise<CreditPurchase[]> {
+    return await db
+      .select()
+      .from(creditPurchases)
+      .where(eq(creditPurchases.userId, userId))
+      .orderBy(desc(creditPurchases.createdAt));
   }
 }
 
