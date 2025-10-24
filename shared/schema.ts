@@ -227,11 +227,36 @@ export const subscriptions = pgTable("subscriptions", {
   plan: text("plan").notNull(), // 'starter' | 'pro'
   creditsTotal: text("credits_total").notNull(), // Total credits in plan per period
   creditsUsed: text("credits_used").notNull().default('0'), // Credits used this period
+  oneTimeCredits: text("one_time_credits").notNull().default('0'), // Additional credits purchased separately
   billingPeriodStart: timestamp("billing_period_start").notNull(),
   billingPeriodEnd: timestamp("billing_period_end").notNull(),
   status: text("status").notNull().default('active'), // 'active' | 'cancelled' | 'expired'
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Credit packages table - defines available credit packages for purchase
+export const creditPackages = pgTable("credit_packages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  credits: text("credits").notNull(), // Number of credits in package
+  priceUSD: text("price_usd").notNull(), // Price in USD
+  description: text("description"),
+  isActive: text("is_active").notNull().default('true'), // 'true' | 'false'
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Credit purchases table - tracks one-time credit purchases
+export const creditPurchases = pgTable("credit_purchases", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  packageId: varchar("package_id").references(() => creditPackages.id),
+  credits: text("credits").notNull(), // Credits purchased
+  amountPaid: text("amount_paid").notNull(), // Amount paid in USD
+  paymentProvider: text("payment_provider"), // 'stripe' | 'manual'
+  paymentId: text("payment_id"), // External payment ID (e.g., Stripe payment intent ID)
+  status: text("status").notNull().default('completed'), // 'pending' | 'completed' | 'failed'
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // Credit transactions table for logging all credit usage
@@ -267,7 +292,24 @@ export const insertCreditTransactionSchema = createInsertSchema(creditTransactio
 export type InsertCreditTransaction = z.infer<typeof insertCreditTransactionSchema>;
 export type CreditTransaction = typeof creditTransactions.$inferSelect;
 
+export const insertCreditPackageSchema = createInsertSchema(creditPackages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertCreditPackage = z.infer<typeof insertCreditPackageSchema>;
+export type CreditPackage = typeof creditPackages.$inferSelect;
+
+export const insertCreditPurchaseSchema = createInsertSchema(creditPurchases).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertCreditPurchase = z.infer<typeof insertCreditPurchaseSchema>;
+export type CreditPurchase = typeof creditPurchases.$inferSelect;
+
 // Plan types
 export type PlanType = 'starter' | 'pro';
 export type SubscriptionStatus = 'active' | 'cancelled' | 'expired';
 export type JobType = 'quick_transform' | 'strategy_generator';
+export type PurchaseStatus = 'pending' | 'completed' | 'failed';
