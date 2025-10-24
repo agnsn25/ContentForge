@@ -375,7 +375,7 @@ export default function Billing() {
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {creditPackages.map((pkg) => (
                   <Card key={pkg.id} className="hover-elevate" data-testid={`package-${pkg.id}`}>
-                    <CardHeader>
+                    <CardHeader className="min-h-[100px]">
                       <CardTitle className="text-lg">{pkg.name}</CardTitle>
                       <CardDescription className="text-xs">{pkg.description}</CardDescription>
                     </CardHeader>
