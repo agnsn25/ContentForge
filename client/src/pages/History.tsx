@@ -16,7 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import ThemeToggle from "@/components/ThemeToggle";
-import { Sparkles, FileText, Share2, Newspaper, Calendar, ExternalLink, Home, LogOut, Zap } from "lucide-react";
+import { Sparkles, FileText, Share2, Newspaper, Calendar, ExternalLink, Home, LogOut, Zap, CreditCard, Coins } from "lucide-react";
 import type { ContentJob, StrategyJob } from "@shared/schema";
 import { format } from "date-fns";
 import logoUrl from "@assets/hammer-logo.png";
@@ -54,6 +54,11 @@ export default function History() {
   const { data: strategyHistory = [], isLoading: isLoadingStrategies } = useQuery<StrategyJob[]>({
     queryKey: ["/api/strategy/history"],
     enabled: isAuthenticated,
+  });
+
+  const { data: subscriptionData } = useQuery<{ hasSubscription: boolean; subscription?: { plan: string; creditsRemaining: number } }>({
+    queryKey: ['/api/subscription'],
+    enabled: !!user,
   });
 
   // Combine and sort by date
@@ -146,8 +151,50 @@ export default function History() {
                 Writing Samples
               </Button>
             )}
+
+            {user && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => window.location.href = '/billing'}
+                data-testid="button-billing-nav"
+              >
+                <CreditCard className="h-4 w-4 mr-2" />
+                Billing
+              </Button>
+            )}
             
             <ThemeToggle />
+            
+            {user && subscriptionData?.hasSubscription && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.location.href = '/pricing'}
+                className="gap-2"
+                data-testid="button-credits-badge"
+              >
+                <Coins className="h-4 w-4" />
+                <span className="font-medium" data-testid="text-credits-remaining">
+                  {subscriptionData.subscription?.creditsRemaining || 0}
+                </span>
+                <Badge variant="secondary" className="text-xs" data-testid="text-subscription-tier">
+                  {subscriptionData.subscription?.plan || 'Unknown'}
+                </Badge>
+              </Button>
+            )}
+            
+            {user && !subscriptionData?.hasSubscription && (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => window.location.href = '/pricing'}
+                data-testid="button-upgrade-pricing"
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                Upgrade
+              </Button>
+            )}
             
             {user && (
               <DropdownMenu>

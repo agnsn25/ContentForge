@@ -386,16 +386,6 @@ export default function Home() {
           </div>
           
           <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => window.location.href = '/'}
-              data-testid="button-home-nav"
-            >
-              <HomeIcon className="h-4 w-4 mr-2" />
-              Home
-            </Button>
-
             {user && (
               <Button
                 variant="ghost"
