@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Plus, FileText, Home, LogOut, History as HistoryIcon } from "lucide-react";
+import { Trash2, Plus, FileText, Home, LogOut, History as HistoryIcon, CreditCard, Coins, Sparkles } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -23,6 +23,7 @@ import {
 import ThemeToggle from "@/components/ThemeToggle";
 import type { WritingSample } from "@shared/schema";
 import logoUrl from "@assets/hammer-logo.png";
+import { Badge } from "@/components/ui/badge";
 
 export default function WritingSamples() {
   const { user } = useAuth();
@@ -33,6 +34,11 @@ export default function WritingSamples() {
 
   const { data: samples = [], isLoading } = useQuery<WritingSample[]>({
     queryKey: ['/api/writing-samples'],
+    enabled: !!user,
+  });
+
+  const { data: subscriptionData } = useQuery<{ hasSubscription: boolean; subscription?: { plan: string; creditsRemaining: number } }>({
+    queryKey: ['/api/subscription'],
     enabled: !!user,
   });
 
@@ -137,8 +143,50 @@ export default function WritingSamples() {
               <HistoryIcon className="h-4 w-4 mr-2" />
               History
             </Button>
+
+            {user && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => window.location.href = '/billing'}
+                data-testid="button-billing-nav"
+              >
+                <CreditCard className="h-4 w-4 mr-2" />
+                Billing
+              </Button>
+            )}
             
             <ThemeToggle />
+            
+            {user && subscriptionData?.hasSubscription && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.location.href = '/pricing'}
+                className="gap-2"
+                data-testid="button-credits-badge"
+              >
+                <Coins className="h-4 w-4" />
+                <span className="font-medium" data-testid="text-credits-remaining">
+                  {subscriptionData.subscription?.creditsRemaining || 0}
+                </span>
+                <Badge variant="secondary" className="text-xs" data-testid="text-subscription-tier">
+                  {subscriptionData.subscription?.plan || 'Unknown'}
+                </Badge>
+              </Button>
+            )}
+            
+            {user && !subscriptionData?.hasSubscription && (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => window.location.href = '/pricing'}
+                data-testid="button-upgrade-pricing"
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                Upgrade
+              </Button>
+            )}
             
             {user && (
               <DropdownMenu>
