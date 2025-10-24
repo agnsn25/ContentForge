@@ -216,7 +216,7 @@ export default function Billing() {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-semibold text-lg capitalize" data-testid="text-plan-name">{subscription.plan}</h3>
-                  <p className="text-sm text-muted-foreground">${subscription.planDetails.price}/month</p>
+                  <p className="text-sm text-muted-foreground">${subscription.planDetails?.price || 0}/month</p>
                 </div>
                 <Badge variant="default" data-testid="badge-plan-status">{subscription.status}</Badge>
               </div>
