@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link } from 'wouter';
-import { Sparkles, LogOut, History as HistoryIcon, FileText, Zap, Map, Home as HomeIcon, AlertTriangle, Coins } from 'lucide-react';
+import { Sparkles, LogOut, History as HistoryIcon, FileText, Zap, Map, Home as HomeIcon, AlertTriangle, Coins, CreditCard } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import UploadZone from '@/components/UploadZone';
 import FormatSelector from '@/components/FormatSelector';
@@ -417,6 +417,18 @@ export default function Home() {
               <HistoryIcon className="h-4 w-4 mr-2" />
               History
             </Button>
+
+            {user && subscriptionData?.hasSubscription && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => window.location.href = '/billing'}
+                data-testid="button-billing-nav"
+              >
+                <CreditCard className="h-4 w-4 mr-2" />
+                Billing
+              </Button>
+            )}
             
             <ThemeToggle />
             
