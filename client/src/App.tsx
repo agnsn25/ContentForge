@@ -8,6 +8,7 @@ import Landing from "@/pages/Landing";
 import Home from "@/pages/Home";
 import History from "@/pages/History";
 import WritingSamples from "@/pages/WritingSamples";
+import Billing from "@/pages/Billing";
 import Pricing from "@/pages/Pricing";
 import TermsOfService from "@/pages/TermsOfService";
 import NotFound from "@/pages/not-found";
@@ -38,6 +39,7 @@ function Router() {
           <Route path="/" component={Home} />
           <Route path="/history" component={History} />
           <Route path="/writing-samples" component={WritingSamples} />
+          <Route path="/billing" component={Billing} />
         </>
       )}
       <Route component={NotFound} />
