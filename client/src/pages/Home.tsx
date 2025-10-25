@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { Sparkles, LogOut, History as HistoryIcon, FileText, Zap, Map, Home as HomeIcon, AlertTriangle, Coins, CreditCard } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import UploadZone from '@/components/UploadZone';
@@ -32,6 +32,7 @@ import logoUrl from "@assets/hammer-logo.png";
 
 export default function Home() {
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
   const [mode, setMode] = useState<'quick' | 'strategy'>('quick');
   const [selectedFormat, setSelectedFormat] = useState<TargetFormat | null>(null);
   const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
@@ -390,7 +391,7 @@ export default function Home() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => window.location.href = '/writing-samples'}
+                onClick={() => setLocation('/writing-samples')}
                 data-testid="button-writing-samples-nav"
               >
                 <FileText className="h-4 w-4 mr-2" />
@@ -401,7 +402,7 @@ export default function Home() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => window.location.href = '/history'}
+              onClick={() => setLocation('/history')}
               data-testid="button-history-nav"
             >
               <HistoryIcon className="h-4 w-4 mr-2" />
@@ -412,7 +413,7 @@ export default function Home() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => window.location.href = '/billing'}
+                onClick={() => setLocation('/billing')}
                 data-testid="button-billing-nav"
               >
                 <CreditCard className="h-4 w-4 mr-2" />
@@ -426,7 +427,7 @@ export default function Home() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => window.location.href = '/pricing'}
+                onClick={() => setLocation('/pricing')}
                 className="gap-2"
                 data-testid="button-credits-badge"
               >
@@ -444,7 +445,7 @@ export default function Home() {
               <Button
                 variant="default"
                 size="sm"
-                onClick={() => window.location.href = '/pricing'}
+                onClick={() => setLocation('/pricing')}
                 data-testid="button-upgrade-pricing"
               >
                 <Sparkles className="h-4 w-4 mr-2" />
