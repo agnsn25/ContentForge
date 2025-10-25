@@ -24,9 +24,9 @@ const creditPackages = [
   },
   {
     name: "Enterprise Pack",
-    credits: "2500",
+    credits: "3000",
     priceUSD: "180",
-    description: "Maximum credits for high-volume content production - save $70",
+    description: "Maximum credits for high-volume content production - save $120",
     isActive: "true",
   },
 ];
