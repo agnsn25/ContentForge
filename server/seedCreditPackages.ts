@@ -11,22 +11,22 @@ const creditPackages = [
   {
     name: "Creator Pack",
     credits: "500",
-    priceUSD: "45",
-    description: "Great value for regular content creators - save $5",
+    priceUSD: "40",
+    description: "Great value for regular content creators - save $10",
     isActive: "true",
   },
   {
     name: "Pro Pack",
     credits: "1000",
-    priceUSD: "85",
-    description: "Best value for power users - save $15",
+    priceUSD: "75",
+    description: "Best value for power users - save $25",
     isActive: "true",
   },
   {
     name: "Enterprise Pack",
     credits: "2500",
-    priceUSD: "200",
-    description: "Maximum credits for high-volume content production - save $50",
+    priceUSD: "180",
+    description: "Maximum credits for high-volume content production - save $70",
     isActive: "true",
   },
 ];
