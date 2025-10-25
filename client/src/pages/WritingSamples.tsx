@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +28,7 @@ import { Badge } from "@/components/ui/badge";
 export default function WritingSamples() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -127,7 +128,7 @@ export default function WritingSamples() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => window.location.href = '/'}
+              onClick={() => setLocation('/')}
               data-testid="button-home-nav"
             >
               <Home className="h-4 w-4 mr-2" />
@@ -137,7 +138,7 @@ export default function WritingSamples() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => window.location.href = '/history'}
+              onClick={() => setLocation('/history')}
               data-testid="button-history-nav"
             >
               <HistoryIcon className="h-4 w-4 mr-2" />
@@ -148,7 +149,7 @@ export default function WritingSamples() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => window.location.href = '/billing'}
+                onClick={() => setLocation('/billing')}
                 data-testid="button-billing-nav"
               >
                 <CreditCard className="h-4 w-4 mr-2" />
@@ -162,7 +163,7 @@ export default function WritingSamples() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => window.location.href = '/pricing'}
+                onClick={() => setLocation('/pricing')}
                 className="gap-2"
                 data-testid="button-credits-badge"
               >
@@ -180,7 +181,7 @@ export default function WritingSamples() {
               <Button
                 variant="default"
                 size="sm"
-                onClick={() => window.location.href = '/pricing'}
+                onClick={() => setLocation('/pricing')}
                 data-testid="button-upgrade-pricing"
               >
                 <Sparkles className="h-4 w-4 mr-2" />
@@ -228,7 +229,7 @@ export default function WritingSamples() {
               <CardDescription>Please log in to manage your writing samples.</CardDescription>
             </CardHeader>
             <CardContent>
-              <Button onClick={() => window.location.href = '/'} data-testid="button-go-home">
+              <Button onClick={() => setLocation('/')} data-testid="button-go-home">
                 Go to Home
               </Button>
             </CardContent>
