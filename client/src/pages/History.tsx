@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +28,7 @@ type HistoryItem = (ContentJob & { itemType: 'quick' }) | (StrategyJob & { itemT
 export default function History() {
   const { toast } = useToast();
   const { user, isAuthenticated, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
   const [viewingStrategy, setViewingStrategy] = useState<StrategyJob | null>(null);
   const [viewingContent, setViewingContent] = useState<ContentJob | null>(null);
 
@@ -133,7 +134,7 @@ export default function History() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => window.location.href = '/'}
+              onClick={() => setLocation('/')}
               data-testid="button-home-nav"
             >
               <Home className="h-4 w-4 mr-2" />
@@ -144,7 +145,7 @@ export default function History() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => window.location.href = '/writing-samples'}
+                onClick={() => setLocation('/writing-samples')}
                 data-testid="button-writing-samples-nav"
               >
                 <FileText className="h-4 w-4 mr-2" />
@@ -156,7 +157,7 @@ export default function History() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => window.location.href = '/billing'}
+                onClick={() => setLocation('/billing')}
                 data-testid="button-billing-nav"
               >
                 <CreditCard className="h-4 w-4 mr-2" />
@@ -170,7 +171,7 @@ export default function History() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => window.location.href = '/pricing'}
+                onClick={() => setLocation('/pricing')}
                 className="gap-2"
                 data-testid="button-credits-badge"
               >
@@ -188,7 +189,7 @@ export default function History() {
               <Button
                 variant="default"
                 size="sm"
-                onClick={() => window.location.href = '/pricing'}
+                onClick={() => setLocation('/pricing')}
                 data-testid="button-upgrade-pricing"
               >
                 <Sparkles className="h-4 w-4 mr-2" />
@@ -244,7 +245,7 @@ export default function History() {
               <p className="text-muted-foreground">
                 Start transforming your content to see your history here
               </p>
-              <Button onClick={() => window.location.href = "/"} data-testid="button-start-transforming">
+              <Button onClick={() => setLocation("/")} data-testid="button-start-transforming">
                 Start Transforming
               </Button>
             </div>
@@ -363,7 +364,7 @@ export default function History() {
                   strategy={viewingStrategy}
                   onStartNew={() => {
                     setViewingStrategy(null);
-                    window.location.href = '/';
+                    setLocation('/');
                   }}
                 />
               </div>
