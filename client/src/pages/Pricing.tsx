@@ -1,7 +1,21 @@
+import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import ThemeToggle from "@/components/ThemeToggle";
+import { Check, Home, History as HistoryIcon, FileText, CreditCard, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import logoUrl from "@assets/hammer-logo.png";
 
 const plans = [
   {
@@ -40,9 +54,101 @@ const plans = [
 
 export default function Pricing() {
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
+
+  const { data: subscriptionData } = useQuery<{ hasSubscription: boolean; subscription?: { plan: string; creditsRemaining: number } }>({
+    queryKey: ['/api/subscription'],
+    enabled: !!user,
+  });
 
   return (
     <div className="min-h-screen bg-background">
+      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <img src={logoUrl} alt="ContentHammer Logo" className="h-8 w-auto" data-testid="icon-logo" />
+            <h1 className="text-xl font-bold text-foreground" data-testid="text-app-name">ContentHammer</h1>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setLocation('/')}
+              data-testid="button-home-nav"
+            >
+              <Home className="h-4 w-4 mr-2" />
+              Home
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setLocation('/history')}
+              data-testid="button-history-nav"
+            >
+              <HistoryIcon className="h-4 w-4 mr-2" />
+              History
+            </Button>
+
+            {user && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setLocation('/writing-samples')}
+                data-testid="button-writing-samples-nav"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Writing Samples
+              </Button>
+            )}
+
+            {user && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setLocation('/billing')}
+                data-testid="button-billing-nav"
+              >
+                <CreditCard className="h-4 w-4 mr-2" />
+                Billing
+              </Button>
+            )}
+            
+            <ThemeToggle />
+            
+            {user && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="gap-2" data-testid="button-user-menu">
+                    <Avatar className="h-7 w-7">
+                      <AvatarImage src={user.profileImageUrl || undefined} />
+                      <AvatarFallback>
+                        {user.firstName?.[0] || user.email?.[0] || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="hidden sm:inline-block" data-testid="text-user-name">
+                      {user.firstName || user.email?.split('@')[0] || 'User'}
+                    </span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel data-testid="text-user-email">{user.email}</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onClick={() => window.location.href = '/api/logout'}
+                    data-testid="button-logout"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+        </div>
+      </header>
+
       <div className="max-w-6xl mx-auto px-4 py-12">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-3" data-testid="text-pricing-title">
