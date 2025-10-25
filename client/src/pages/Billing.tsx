@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -59,6 +59,7 @@ interface BillingDashboardData {
 export default function Billing() {
   const { toast } = useToast();
   const { user, isAuthenticated, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -118,7 +119,7 @@ export default function Billing() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => window.location.href = '/'}
+              onClick={() => setLocation('/')}
               data-testid="button-home-nav"
             >
               <Home className="h-4 w-4 mr-2" />
@@ -128,7 +129,7 @@ export default function Billing() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => window.location.href = '/history'}
+              onClick={() => setLocation('/history')}
               data-testid="button-history-nav"
             >
               <HistoryIcon className="h-4 w-4 mr-2" />
@@ -139,7 +140,7 @@ export default function Billing() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => window.location.href = '/writing-samples'}
+                onClick={() => setLocation('/writing-samples')}
                 data-testid="button-writing-samples-nav"
               >
                 <FileText className="h-4 w-4 mr-2" />
@@ -153,7 +154,7 @@ export default function Billing() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => window.location.href = '/pricing'}
+                onClick={() => setLocation('/pricing')}
                 className="gap-2"
                 data-testid="button-credits-badge"
               >
@@ -171,7 +172,7 @@ export default function Billing() {
               <Button
                 variant="default"
                 size="sm"
-                onClick={() => window.location.href = '/pricing'}
+                onClick={() => setLocation('/pricing')}
                 data-testid="button-upgrade-pricing"
               >
                 <Sparkles className="h-4 w-4 mr-2" />
