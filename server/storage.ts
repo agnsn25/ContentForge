@@ -69,6 +69,11 @@ export interface IStorage {
   // Credit purchase operations
   createCreditPurchase(purchase: InsertCreditPurchase): Promise<CreditPurchase>;
   getUserCreditPurchases(userId: string): Promise<CreditPurchase[]>;
+  updateCreditPurchaseStatus(id: string, status: string): Promise<CreditPurchase>;
+  
+  // Stripe operations
+  updateUserStripeCustomerId(userId: string, stripeCustomerId: string): Promise<User>;
+  updateUserStripeInfo(userId: string, stripeCustomerId: string, stripeSubscriptionId: string): Promise<User>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -343,6 +348,55 @@ export class DatabaseStorage implements IStorage {
       .from(creditPurchases)
       .where(eq(creditPurchases.userId, userId))
       .orderBy(desc(creditPurchases.createdAt));
+  }
+
+  async updateCreditPurchaseStatus(id: string, status: string): Promise<CreditPurchase> {
+    const [purchase] = await db
+      .update(creditPurchases)
+      .set({ status })
+      .where(eq(creditPurchases.id, id))
+      .returning();
+    
+    if (!purchase) {
+      throw new Error('Credit purchase not found');
+    }
+    
+    return purchase;
+  }
+
+  async updateUserStripeCustomerId(userId: string, stripeCustomerId: string): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ 
+        stripeCustomerId,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    
+    if (!user) {
+      throw new Error('User not found');
+    }
+    
+    return user;
+  }
+
+  async updateUserStripeInfo(userId: string, stripeCustomerId: string, stripeSubscriptionId: string): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ 
+        stripeCustomerId,
+        stripeSubscriptionId,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    
+    if (!user) {
+      throw new Error('User not found');
+    }
+    
+    return user;
   }
 }
 
