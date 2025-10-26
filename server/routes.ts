@@ -413,7 +413,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Stripe webhook for payment events
-  app.post('/api/stripe/webhook', multer().none(), async (req, res) => {
+  // NOTE: req.body is a raw Buffer because of express.raw() middleware in server/index.ts
+  app.post('/api/stripe/webhook', async (req, res) => {
     const sig = req.headers['stripe-signature'];
 
     if (!sig || !process.env.STRIPE_WEBHOOK_SECRET) {
