@@ -343,6 +343,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Stripe routes - Update existing subscription (plan switching)
+  app.post('/api/stripe/update-subscription', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { plan, priceId } = req.body;
+
+      if (!plan || !priceId) {
+        return res.status(400).json({ error: 'Plan and priceId are required' });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      const existingSubscription = await storage.getUserSubscription(userId);
+      if (!existingSubscription || !existingSubscription.stripeSubscriptionId) {
+        return res.status(404).json({ error: 'No active subscription found' });
+      }
+
+      // Get the Stripe subscription
+      const stripeSubscription = await stripe.subscriptions.retrieve(
+        existingSubscription.stripeSubscriptionId
+      );
+
+      if (!stripeSubscription || stripeSubscription.status === 'canceled') {
+        return res.status(400).json({ error: 'Subscription is not active' });
+      }
+
+      // Update the subscription to the new price
+      const updatedSubscription = await stripe.subscriptions.update(
+        existingSubscription.stripeSubscriptionId,
+        {
+          items: [{
+            id: stripeSubscription.items.data[0].id,
+            price: priceId,
+          }],
+          proration_behavior: 'always_invoice',
+        }
+      );
+
+      // Update our database
+      let newPlan: 'starter' | 'pro' = 'starter';
+      let creditsTotal = '500';
+      
+      if (priceId === process.env.VITE_STRIPE_PRO_PRICE_ID) {
+        newPlan = 'pro';
+        creditsTotal = '1500';
+      }
+
+      await storage.updateSubscription(existingSubscription.id, {
+        plan: newPlan,
+        creditsTotal,
+        stripePriceId: priceId,
+      });
+
+      res.json({
+        success: true,
+        subscription: updatedSubscription,
+      });
+    } catch (error: any) {
+      console.error("Error updating subscription:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Stripe routes - Credit pack checkout
   app.post('/api/stripe/create-credit-pack-checkout', isAuthenticated, async (req: any, res) => {
     try {
