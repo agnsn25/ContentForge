@@ -23,6 +23,7 @@ const plans = [
     name: 'Starter',
     price: 19,
     credits: 500,
+    priceId: import.meta.env.VITE_STRIPE_STARTER_PRICE_ID,
     description: 'Perfect for content creators getting started',
     features: [
       'Quick Transform for all formats',
@@ -39,6 +40,7 @@ const plans = [
     name: 'Pro',
     price: 49,
     credits: 1500,
+    priceId: import.meta.env.VITE_STRIPE_PRO_PRICE_ID,
     description: 'For serious creators and agencies',
     features: [
       'Everything in Starter',
@@ -200,14 +202,43 @@ export default function Pricing() {
                 </ul>
               </CardContent>
               <CardFooter>
-                <Button 
-                  className="w-full" 
-                  variant={plan.recommended ? 'default' : 'outline'}
-                  disabled
-                  data-testid={`button-select-plan-${plan.id}`}
-                >
-                  Coming Soon
-                </Button>
+                {!user ? (
+                  <Button 
+                    className="w-full" 
+                    variant={plan.recommended ? 'default' : 'outline'}
+                    onClick={() => window.location.href = '/api/login'}
+                    data-testid={`button-select-plan-${plan.id}`}
+                  >
+                    Sign In to Subscribe
+                  </Button>
+                ) : subscriptionData?.hasSubscription && subscriptionData.subscription?.plan === plan.id ? (
+                  <Button 
+                    className="w-full" 
+                    variant="outline"
+                    disabled
+                    data-testid={`button-select-plan-${plan.id}`}
+                  >
+                    Current Plan
+                  </Button>
+                ) : plan.priceId ? (
+                  <Button 
+                    className="w-full" 
+                    variant={plan.recommended ? 'default' : 'outline'}
+                    onClick={() => setLocation(`/subscribe?plan=${plan.id}&priceId=${plan.priceId}`)}
+                    data-testid={`button-select-plan-${plan.id}`}
+                  >
+                    {subscriptionData?.hasSubscription ? 'Switch Plan' : 'Subscribe Now'}
+                  </Button>
+                ) : (
+                  <Button 
+                    className="w-full" 
+                    variant={plan.recommended ? 'default' : 'outline'}
+                    disabled
+                    data-testid={`button-select-plan-${plan.id}`}
+                  >
+                    Coming Soon
+                  </Button>
+                )}
               </CardFooter>
             </Card>
           ))}

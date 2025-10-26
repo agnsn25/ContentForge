@@ -81,11 +81,43 @@ ContentHammer is a full-stack application built with React and TypeScript for th
 ## External Dependencies
 - **Authentication:** Replit Auth (OpenID Connect)
 - **AI:** xAI Grok (via OpenAI SDK for API interaction)
+- **Payments:** Stripe for subscription billing and one-time credit pack purchases
 - **Database:** PostgreSQL (specifically Neon for cloud hosting)
 - **ORM:** Drizzle ORM
 - **Transcript Services:**
     - `@danielxceron/youtube-transcript` for YouTube video transcription.
     - `spotify-url-info` for Spotify podcast metadata retrieval.
 - **File Upload Handling:** Multer (for backend file processing).
-- **Frontend Libraries:** React Query, Wouter (for routing).
+- **Frontend Libraries:** React Query, Wouter (for routing), Stripe React Elements.
 - **Styling Framework:** Tailwind CSS.
+
+## Payment Integration
+**Stripe Integration Status:** Fully integrated for subscriptions and one-time credit purchases
+- **Subscription Payments:** Users can subscribe to monthly plans (Starter $19/mo, Pro $49/mo) via Stripe
+- **Credit Pack Purchases:** Users can buy one-time credit packs that never expire
+- **Payment Flow:**
+  1. Subscription checkout: `/subscribe?plan={plan}&priceId={stripePrice}` → Stripe payment form → webhook processes success
+  2. Credit pack checkout: `/buy-credits?packageId={packageId}` → Stripe payment form → webhook processes success
+- **Webhooks:** Stripe webhooks handle subscription creation, renewal, and payment success events
+- **Database Tracking:** 
+  - User Stripe customer IDs and subscription IDs stored in `users` table
+  - Subscription details with Stripe metadata in `subscriptions` table
+  - Credit purchases tracked in `creditPurchases` table with payment provider and status
+
+**Setup Requirements:**
+To enable payments, you need to:
+1. Create products and price IDs in your Stripe Dashboard (https://dashboard.stripe.com/products)
+2. Set the following environment variables:
+   - `VITE_STRIPE_STARTER_PRICE_ID` - Stripe price ID for Starter plan ($19/mo, 500 credits)
+   - `VITE_STRIPE_PRO_PRICE_ID` - Stripe price ID for Pro plan ($49/mo, 1500 credits)
+   - `STRIPE_WEBHOOK_SECRET` - Webhook signing secret for validating webhook events
+3. Configure Stripe webhook endpoint at: `https://your-app.replit.app/api/stripe/webhook`
+   - Events to listen for: `payment_intent.succeeded`, `invoice.payment_succeeded`, `customer.subscription.deleted`
+
+**Credit Packages:**
+Credit packages are defined in the database (`creditPackages` table). To add packages, insert records with:
+- `name`: Package display name
+- `credits`: Number of credits
+- `priceUSD`: Price in USD
+- `description`: Package description
+- `isActive`: 'true' to show in UI

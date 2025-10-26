@@ -389,7 +389,11 @@ export default function Billing() {
                         <span className="text-2xl font-bold">${pkg.priceUSD}</span>
                         <span className="text-sm text-muted-foreground">USD</span>
                       </div>
-                      <Button className="w-full" data-testid={`button-buy-${pkg.id}`}>
+                      <Button 
+                        className="w-full" 
+                        onClick={() => setLocation(`/buy-credits?packageId=${pkg.id}`)}
+                        data-testid={`button-buy-${pkg.id}`}
+                      >
                         <CreditCard className="h-4 w-4 mr-2" />
                         Buy Now
                       </Button>

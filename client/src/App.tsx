@@ -11,6 +11,8 @@ import WritingSamples from "@/pages/WritingSamples";
 import Billing from "@/pages/Billing";
 import Pricing from "@/pages/Pricing";
 import TermsOfService from "@/pages/TermsOfService";
+import SubscribeCheckout from "@/pages/SubscribeCheckout";
+import CreditPackCheckout from "@/pages/CreditPackCheckout";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -40,6 +42,8 @@ function Router() {
           <Route path="/history" component={History} />
           <Route path="/writing-samples" component={WritingSamples} />
           <Route path="/billing" component={Billing} />
+          <Route path="/subscribe" component={SubscribeCheckout} />
+          <Route path="/buy-credits" component={CreditPackCheckout} />
         </>
       )}
       <Route component={NotFound} />
