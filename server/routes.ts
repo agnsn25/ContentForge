@@ -533,6 +533,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin endpoint to manually complete pending credit purchases
+  app.post('/api/admin/complete-pending-purchases', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Get all pending purchases
+      const pendingPurchases = await storage.getPendingCreditPurchases();
+      
+      if (pendingPurchases.length === 0) {
+        return res.json({ 
+          message: 'No pending purchases found',
+          completed: 0 
+        });
+      }
+
+      const completedPurchases = [];
+      
+      // Process each pending purchase
+      for (const purchase of pendingPurchases) {
+        try {
+          // Mark purchase as completed
+          await storage.updateCreditPurchaseStatus(purchase.id, 'completed');
+          
+          // Add credits to user account
+          await storage.addOneTimeCredits(purchase.userId, parseInt(purchase.credits));
+          
+          completedPurchases.push({
+            purchaseId: purchase.id,
+            userId: purchase.userId,
+            credits: purchase.credits,
+            amount: purchase.amountPaid,
+          });
+        } catch (error) {
+          console.error(`Failed to process purchase ${purchase.id}:`, error);
+        }
+      }
+
+      res.json({
+        message: `Successfully completed ${completedPurchases.length} pending purchases`,
+        completed: completedPurchases.length,
+        purchases: completedPurchases,
+      });
+    } catch (error: any) {
+      console.error("Error completing pending purchases:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Extract transcript endpoint - extracts transcript without transformation for cost estimation
   app.post('/api/extract-transcript', upload.single('file'), async (req: any, res) => {
     try {
