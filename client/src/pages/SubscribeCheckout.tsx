@@ -133,8 +133,13 @@ export default function SubscribeCheckout() {
       return;
     }
 
-    // If user has an active subscription, update it instead of creating a new one
-    if (subscriptionData?.hasSubscription && subscriptionData?.subscription?.status === 'active') {
+    // If user has an active subscription WITH a Stripe subscription ID, update it
+    // Otherwise, create a new Stripe subscription (even if they have a DB record)
+    const hasStripeSubscription = subscriptionData?.hasSubscription && 
+                                   subscriptionData?.subscription?.status === 'active' &&
+                                   subscriptionData?.subscription?.stripeSubscriptionId;
+
+    if (hasStripeSubscription) {
       setIsUpdatingExisting(true);
       
       apiRequest("POST", "/api/stripe/update-subscription", { plan, priceId })
