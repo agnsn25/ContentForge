@@ -168,6 +168,26 @@ export default function SubscribeCheckout() {
         .then((res) => res.json())
         .then((data) => {
           if (data.error) {
+            // If user already has a subscription, switch to update flow
+            if (data.code === 'EXISTING_SUBSCRIPTION') {
+              setIsUpdatingExisting(true);
+              return apiRequest("POST", "/api/stripe/update-subscription", { plan, priceId })
+                .then((res) => res.json())
+                .then((updateData) => {
+                  if (updateData.error) {
+                    throw new Error(updateData.error);
+                  }
+                  
+                  toast({
+                    title: "Plan Updated!",
+                    description: `Your subscription has been switched to the ${currentPlan.name} plan.`,
+                  });
+                  
+                  setTimeout(() => {
+                    setLocation('/billing');
+                  }, 1500);
+                });
+            }
             throw new Error(data.error);
           }
           setClientSecret(data.clientSecret);

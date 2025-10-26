@@ -300,6 +300,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'User not found' });
       }
 
+      // Check if user already has an active subscription
+      const existingSubscription = await storage.getUserSubscription(userId);
+      if (existingSubscription && existingSubscription.stripeSubscriptionId && existingSubscription.status === 'active') {
+        return res.status(400).json({ 
+          error: 'You already have an active subscription. Please use the update subscription endpoint to change your plan.',
+          code: 'EXISTING_SUBSCRIPTION'
+        });
+      }
+
       let customerId = user.stripeCustomerId;
 
       if (!customerId) {
