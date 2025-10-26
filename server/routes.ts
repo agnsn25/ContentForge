@@ -1,7 +1,11 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
+import Stripe from "stripe";
 import { storage } from "./storage";
+import { db } from "./db";
+import { users } from "@shared/schema";
+import { eq } from "drizzle-orm";
 import { transformContent } from "./grok";
 import { getYoutubeTranscript, getSpotifyTranscript, extractTextFromFile } from "./transcript";
 import { executeStep1, executeStep2, executeStep3, executeStep4, executeStep5 } from "./strategy";
@@ -13,6 +17,13 @@ import {
   calculateCreditsRemaining,
   PLAN_DETAILS 
 } from "./credits";
+
+if (!process.env.STRIPE_SECRET_KEY) {
+  throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
+}
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: "2025-09-30.clover",
+});
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -271,6 +282,254 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching billing dashboard:", error);
       res.status(500).json({ message: "Failed to fetch billing dashboard" });
+    }
+  });
+
+  // Stripe routes - Subscription checkout
+  app.post('/api/stripe/create-subscription-checkout', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { plan, priceId } = req.body;
+
+      if (!plan || !priceId) {
+        return res.status(400).json({ error: 'Plan and priceId are required' });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      let customerId = user.stripeCustomerId;
+
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: user.email || undefined,
+          metadata: {
+            userId: user.id,
+          },
+        });
+        customerId = customer.id;
+        await storage.updateUserStripeCustomerId(userId, customerId);
+      }
+
+      const subscription = await stripe.subscriptions.create({
+        customer: customerId,
+        items: [{
+          price: priceId,
+        }],
+        payment_behavior: 'default_incomplete',
+        payment_settings: { save_default_payment_method: 'on_subscription' },
+        expand: ['latest_invoice.payment_intent'],
+      });
+
+      const latestInvoice = subscription.latest_invoice;
+      if (!latestInvoice || typeof latestInvoice === 'string') {
+        throw new Error('Failed to create subscription invoice');
+      }
+
+      const paymentIntent = latestInvoice.payment_intent;
+      if (!paymentIntent || typeof paymentIntent === 'string') {
+        throw new Error('Failed to create payment intent');
+      }
+
+      res.json({
+        subscriptionId: subscription.id,
+        clientSecret: paymentIntent.client_secret,
+      });
+    } catch (error: any) {
+      console.error("Error creating subscription checkout:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Stripe routes - Credit pack checkout
+  app.post('/api/stripe/create-credit-pack-checkout', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { packageId } = req.body;
+
+      if (!packageId) {
+        return res.status(400).json({ error: 'Package ID is required' });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      const packages = await storage.getCreditPackages();
+      const selectedPackage = packages.find(p => p.id === packageId);
+
+      if (!selectedPackage) {
+        return res.status(404).json({ error: 'Package not found' });
+      }
+
+      let customerId = user.stripeCustomerId;
+
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: user.email || undefined,
+          metadata: {
+            userId: user.id,
+          },
+        });
+        customerId = customer.id;
+        await storage.updateUserStripeCustomerId(userId, customerId);
+      }
+
+      const amountInCents = Math.round(parseFloat(selectedPackage.priceUSD) * 100);
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amountInCents,
+        currency: 'usd',
+        customer: customerId,
+        metadata: {
+          userId,
+          packageId,
+          credits: selectedPackage.credits,
+          type: 'credit_pack_purchase',
+        },
+      });
+
+      const purchase = await storage.createCreditPurchase({
+        userId,
+        packageId,
+        credits: selectedPackage.credits,
+        amountPaid: selectedPackage.priceUSD,
+        paymentProvider: 'stripe',
+        paymentId: paymentIntent.id,
+        status: 'pending',
+      });
+
+      res.json({
+        clientSecret: paymentIntent.client_secret,
+        purchaseId: purchase.id,
+      });
+    } catch (error: any) {
+      console.error("Error creating credit pack checkout:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Stripe webhook for payment events
+  app.post('/api/stripe/webhook', multer().none(), async (req, res) => {
+    const sig = req.headers['stripe-signature'];
+
+    if (!sig || !process.env.STRIPE_WEBHOOK_SECRET) {
+      return res.status(400).send('Webhook signature missing');
+    }
+
+    let event: Stripe.Event;
+
+    try {
+      event = stripe.webhooks.constructEvent(
+        req.body,
+        sig,
+        process.env.STRIPE_WEBHOOK_SECRET
+      );
+    } catch (err: any) {
+      console.error('Webhook signature verification failed:', err.message);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    try {
+      switch (event.type) {
+        case 'payment_intent.succeeded': {
+          const paymentIntent = event.data.object as Stripe.PaymentIntent;
+          
+          if (paymentIntent.metadata.type === 'credit_pack_purchase') {
+            const { userId, credits } = paymentIntent.metadata;
+            
+            const purchases = await storage.getUserCreditPurchases(userId);
+            const purchase = purchases.find(p => p.paymentId === paymentIntent.id);
+            
+            if (purchase && purchase.status === 'pending') {
+              await storage.updateCreditPurchaseStatus(purchase.id, 'completed');
+              await storage.addOneTimeCredits(userId, parseInt(credits));
+            }
+          }
+          break;
+        }
+
+        case 'invoice.payment_succeeded': {
+          const invoice = event.data.object as Stripe.Invoice;
+          
+          const subscriptionId = invoice.subscription;
+          if (subscriptionId && typeof subscriptionId === 'string') {
+            const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+            const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
+            
+            const allUsers = await db.select().from(users).where(eq(users.stripeCustomerId, customerId));
+            const user = allUsers[0];
+            
+            if (user) {
+              const priceId = subscription.items.data[0]?.price.id;
+              let plan: 'starter' | 'pro' = 'starter';
+              let creditsTotal = '500';
+              
+              if (priceId === process.env.VITE_STRIPE_PRO_PRICE_ID) {
+                plan = 'pro';
+                creditsTotal = '1500';
+              }
+              
+              const existingSubscription = await storage.getUserSubscription(user.id);
+              
+              if (existingSubscription) {
+                await storage.updateSubscription(existingSubscription.id, {
+                  status: 'active',
+                  stripeSubscriptionId: subscription.id,
+                  stripePriceId: priceId,
+                  billingPeriodStart: new Date(subscription.current_period_start * 1000),
+                  billingPeriodEnd: new Date(subscription.current_period_end * 1000),
+                  stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
+                  creditsUsed: '0',
+                });
+              } else {
+                await storage.createSubscription({
+                  userId: user.id,
+                  plan,
+                  creditsTotal,
+                  creditsUsed: '0',
+                  oneTimeCredits: '0',
+                  billingPeriodStart: new Date(subscription.current_period_start * 1000),
+                  billingPeriodEnd: new Date(subscription.current_period_end * 1000),
+                  status: 'active',
+                  stripeSubscriptionId: subscription.id,
+                  stripePriceId: priceId,
+                  stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
+                });
+              }
+              
+              await storage.updateUserStripeInfo(user.id, customerId, subscription.id);
+            }
+          }
+          break;
+        }
+
+        case 'customer.subscription.deleted': {
+          const subscription = event.data.object as Stripe.Subscription;
+          const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
+          
+          const allUsers = await db.select().from(users).where(eq(users.stripeCustomerId, customerId));
+          const user = allUsers[0];
+          
+          if (user) {
+            const existingSubscription = await storage.getUserSubscription(user.id);
+            if (existingSubscription) {
+              await storage.updateSubscription(existingSubscription.id, {
+                status: 'cancelled',
+              });
+            }
+          }
+          break;
+        }
+      }
+
+      res.json({ received: true });
+    } catch (error) {
+      console.error('Error processing webhook:', error);
+      res.status(500).json({ error: 'Webhook processing failed' });
     }
   });
 
