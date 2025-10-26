@@ -7,6 +7,7 @@ import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 
 if (!import.meta.env.VITE_STRIPE_PUBLIC_KEY) {
   throw new Error('Missing required Stripe key: VITE_STRIPE_PUBLIC_KEY');
@@ -96,6 +97,7 @@ const CheckoutForm = ({ plan, amount }: CheckoutFormProps) => {
 
 export default function SubscribeCheckout() {
   const [clientSecret, setClientSecret] = useState("");
+  const [isUpdatingExisting, setIsUpdatingExisting] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   
@@ -110,6 +112,11 @@ export default function SubscribeCheckout() {
 
   const currentPlan = planDetails[plan as keyof typeof planDetails] || planDetails.starter;
 
+  // Check if user has an active subscription
+  const { data: subscriptionData } = useQuery({
+    queryKey: ['/api/subscription'],
+  });
+
   useEffect(() => {
     if (!priceId) {
       toast({
@@ -121,23 +128,71 @@ export default function SubscribeCheckout() {
       return;
     }
 
-    apiRequest("POST", "/api/stripe/create-subscription-checkout", { plan, priceId })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.error) {
-          throw new Error(data.error);
-        }
-        setClientSecret(data.clientSecret);
-      })
-      .catch((error) => {
-        toast({
-          title: "Checkout Error",
-          description: error.message,
-          variant: "destructive",
+    // Wait for subscription data to load
+    if (subscriptionData === undefined) {
+      return;
+    }
+
+    // If user has an active subscription, update it instead of creating a new one
+    if (subscriptionData?.hasSubscription && subscriptionData?.subscription?.status === 'active') {
+      setIsUpdatingExisting(true);
+      
+      apiRequest("POST", "/api/stripe/update-subscription", { plan, priceId })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.error) {
+            throw new Error(data.error);
+          }
+          
+          toast({
+            title: "Plan Updated!",
+            description: `Your subscription has been switched to the ${currentPlan.name} plan.`,
+          });
+          
+          // Redirect to billing page
+          setTimeout(() => {
+            setLocation('/billing');
+          }, 1500);
+        })
+        .catch((error) => {
+          toast({
+            title: "Update Error",
+            description: error.message,
+            variant: "destructive",
+          });
+          setLocation('/pricing');
         });
-        setLocation('/pricing');
-      });
-  }, [plan, priceId, toast, setLocation]);
+    } else {
+      // Create new subscription
+      apiRequest("POST", "/api/stripe/create-subscription-checkout", { plan, priceId })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.error) {
+            throw new Error(data.error);
+          }
+          setClientSecret(data.clientSecret);
+        })
+        .catch((error) => {
+          toast({
+            title: "Checkout Error",
+            description: error.message,
+            variant: "destructive",
+          });
+          setLocation('/pricing');
+        });
+    }
+  }, [plan, priceId, toast, setLocation, subscriptionData, currentPlan.name]);
+
+  if (isUpdatingExisting) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+          <p className="text-muted-foreground" data-testid="text-updating-plan">Updating your plan...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!clientSecret) {
     return (
