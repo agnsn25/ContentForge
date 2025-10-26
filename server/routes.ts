@@ -323,12 +323,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         expand: ['latest_invoice.payment_intent'],
       });
 
-      const latestInvoice = subscription.latest_invoice;
+      const latestInvoice = subscription.latest_invoice as Stripe.Invoice;
       if (!latestInvoice || typeof latestInvoice === 'string') {
         throw new Error('Failed to create subscription invoice');
       }
 
-      const paymentIntent = latestInvoice.payment_intent;
+      const paymentIntent = (latestInvoice as any).payment_intent as Stripe.PaymentIntent;
       if (!paymentIntent || typeof paymentIntent === 'string') {
         throw new Error('Failed to create payment intent');
       }
@@ -456,7 +456,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         case 'invoice.payment_succeeded': {
           const invoice = event.data.object as Stripe.Invoice;
           
-          const subscriptionId = invoice.subscription;
+          const subscriptionId = (invoice as any).subscription;
           if (subscriptionId && typeof subscriptionId === 'string') {
             const subscription = await stripe.subscriptions.retrieve(subscriptionId);
             const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
@@ -481,9 +481,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   status: 'active',
                   stripeSubscriptionId: subscription.id,
                   stripePriceId: priceId,
-                  billingPeriodStart: new Date(subscription.current_period_start * 1000),
-                  billingPeriodEnd: new Date(subscription.current_period_end * 1000),
-                  stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
+                  billingPeriodStart: new Date((subscription as any).current_period_start * 1000),
+                  billingPeriodEnd: new Date((subscription as any).current_period_end * 1000),
+                  stripeCurrentPeriodEnd: new Date((subscription as any).current_period_end * 1000),
                   creditsUsed: '0',
                 });
               } else {
@@ -493,12 +493,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   creditsTotal,
                   creditsUsed: '0',
                   oneTimeCredits: '0',
-                  billingPeriodStart: new Date(subscription.current_period_start * 1000),
-                  billingPeriodEnd: new Date(subscription.current_period_end * 1000),
+                  billingPeriodStart: new Date((subscription as any).current_period_start * 1000),
+                  billingPeriodEnd: new Date((subscription as any).current_period_end * 1000),
                   status: 'active',
                   stripeSubscriptionId: subscription.id,
                   stripePriceId: priceId,
-                  stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
+                  stripeCurrentPeriodEnd: new Date((subscription as any).current_period_end * 1000),
                 });
               }
               
