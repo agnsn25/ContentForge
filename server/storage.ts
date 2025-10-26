@@ -70,6 +70,8 @@ export interface IStorage {
   createCreditPurchase(purchase: InsertCreditPurchase): Promise<CreditPurchase>;
   getUserCreditPurchases(userId: string): Promise<CreditPurchase[]>;
   updateCreditPurchaseStatus(id: string, status: string): Promise<CreditPurchase>;
+  getPendingCreditPurchases(): Promise<CreditPurchase[]>;
+  getCreditPurchase(id: string): Promise<CreditPurchase | undefined>;
   
   // Stripe operations
   updateUserStripeCustomerId(userId: string, stripeCustomerId: string): Promise<User>;
@@ -361,6 +363,22 @@ export class DatabaseStorage implements IStorage {
       throw new Error('Credit purchase not found');
     }
     
+    return purchase;
+  }
+
+  async getPendingCreditPurchases(): Promise<CreditPurchase[]> {
+    return await db
+      .select()
+      .from(creditPurchases)
+      .where(eq(creditPurchases.status, 'pending'))
+      .orderBy(desc(creditPurchases.createdAt));
+  }
+
+  async getCreditPurchase(id: string): Promise<CreditPurchase | undefined> {
+    const [purchase] = await db
+      .select()
+      .from(creditPurchases)
+      .where(eq(creditPurchases.id, id));
     return purchase;
   }
 
