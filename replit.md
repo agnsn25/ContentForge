@@ -59,7 +59,7 @@ ContentHammer is a full-stack application built with React and TypeScript for th
         - Users can purchase credit packages that never expire
         - Purchased credits are tracked separately from subscription credits in `oneTimeCredits` field
         - Credit usage priority: One-time purchased credits are used first, then subscription credits
-        - Available packages: Starter Pack (100/$10), Creator Pack (500/$45), Pro Pack (1000/$85), Enterprise Pack (2500/$200)
+        - Available packages: Starter Pack (100/$10), Creator Pack (500/$40), Pro Pack (1000/$75), Enterprise Pack (3000/$180)
         - Purchase history tracked in `creditPurchases` table with payment details
     - **Billing Dashboard:**
         - Accessible at `/billing` for all authenticated users (with or without subscriptions)
