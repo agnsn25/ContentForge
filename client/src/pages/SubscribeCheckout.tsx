@@ -168,7 +168,7 @@ export default function SubscribeCheckout() {
           setLocation('/pricing');
         });
     } else {
-      // Create new subscription
+      // Create new subscription using Stripe Checkout
       apiRequest("POST", "/api/stripe/create-subscription-checkout", { plan, priceId })
         .then((res) => res.json())
         .then((data) => {
@@ -195,7 +195,13 @@ export default function SubscribeCheckout() {
             }
             throw new Error(data.error);
           }
-          setClientSecret(data.clientSecret);
+          
+          // Redirect to Stripe Checkout
+          if (data.url) {
+            window.location.href = data.url;
+          } else {
+            throw new Error('No checkout URL received');
+          }
         })
         .catch((error) => {
           toast({

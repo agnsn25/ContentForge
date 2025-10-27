@@ -93,16 +93,21 @@ ContentHammer is a full-stack application built with React and TypeScript for th
 
 ## Payment Integration
 **Stripe Integration Status:** Fully integrated for subscriptions and one-time credit purchases
-- **Subscription Payments:** Users can subscribe to monthly plans (Starter $19/mo, Pro $49/mo) via Stripe
-- **Credit Pack Purchases:** Users can buy one-time credit packs that never expire
+- **Subscription Payments:** Users can subscribe to monthly plans (Starter $19/mo, Pro $49/mo) via Stripe Checkout Sessions
+- **Credit Pack Purchases:** Users can buy one-time credit packs that never expire using Stripe Payment Intents
 - **Payment Flow:**
-  1. Subscription checkout: `/subscribe?plan={plan}&priceId={stripePrice}` → Stripe payment form → webhook processes success
-  2. Credit pack checkout: `/buy-credits?packageId={packageId}` → Stripe payment form → webhook processes success
-- **Webhooks:** Stripe webhooks handle subscription creation, renewal, and payment success events
+  1. Subscription checkout: User clicks "Switch Plan" → Backend creates Stripe Checkout Session → User redirected to Stripe-hosted checkout page → After payment, redirected to billing page → Webhook processes subscription creation
+  2. Plan switching (with existing Stripe subscription): Backend calls Stripe API to update subscription, handles proration automatically
+  3. Credit pack checkout: `/buy-credits?packageId={packageId}` → Stripe Payment Elements form → webhook processes success
+- **Webhooks:** Stripe webhooks handle checkout completion, subscription updates, renewals, and payment success events
 - **Database Tracking:** 
   - User Stripe customer IDs and subscription IDs stored in `users` table
   - Subscription details with Stripe metadata in `subscriptions` table
   - Credit purchases tracked in `creditPurchases` table with payment provider and status
+- **Implementation Details:**
+  - New subscriptions use Stripe Checkout Sessions (hosted payment page)
+  - Plan switching for users with valid Stripe subscription IDs uses Stripe Subscriptions API directly
+  - Subscriptions without Stripe IDs (legacy/test data) automatically route through new checkout flow
 
 **Setup Requirements:**
 To enable payments, you need to:
@@ -112,7 +117,7 @@ To enable payments, you need to:
    - `VITE_STRIPE_PRO_PRICE_ID` - Stripe price ID for Pro plan ($49/mo, 1500 credits)
    - `STRIPE_WEBHOOK_SECRET` - Webhook signing secret for validating webhook events
 3. Configure Stripe webhook endpoint at: `https://your-app.replit.app/api/stripe/webhook`
-   - Events to listen for: `payment_intent.succeeded`, `invoice.payment_succeeded`, `customer.subscription.deleted`
+   - Events to listen for: `checkout.session.completed`, `payment_intent.succeeded`, `invoice.payment_succeeded`, `customer.subscription.deleted`
 
 **Credit Packages:**
 Credit packages are defined in the database (`creditPackages` table). To add packages, insert records with:

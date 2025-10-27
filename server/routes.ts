@@ -285,7 +285,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Stripe routes - Subscription checkout
+  // Stripe routes - Subscription checkout (using Checkout Sessions)
   app.post('/api/stripe/create-subscription-checkout', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -322,37 +322,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.updateUserStripeCustomerId(userId, customerId);
       }
 
-      console.log('Creating Stripe subscription for customer:', customerId, 'with price:', priceId);
-      const subscription = await stripe.subscriptions.create({
+      // Create Stripe Checkout Session for subscription
+      const session = await stripe.checkout.sessions.create({
         customer: customerId,
-        items: [{
-          price: priceId,
-        }],
-        payment_behavior: 'default_incomplete',
-        payment_settings: { save_default_payment_method: 'on_subscription' },
-        expand: ['latest_invoice.payment_intent'],
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price: priceId,
+            quantity: 1,
+          },
+        ],
+        mode: 'subscription',
+        success_url: `${process.env.REPLIT_DEV_DOMAIN || 'http://localhost:5000'}/billing?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.REPLIT_DEV_DOMAIN || 'http://localhost:5000'}/pricing`,
+        metadata: {
+          userId: user.id,
+          plan: plan,
+        },
       });
 
-      console.log('Subscription created:', subscription.id);
-      console.log('Latest invoice type:', typeof subscription.latest_invoice);
-      
-      const latestInvoice = subscription.latest_invoice as Stripe.Invoice;
-      if (!latestInvoice || typeof latestInvoice === 'string') {
-        console.error('Invalid invoice:', latestInvoice);
-        throw new Error('Failed to create subscription invoice');
-      }
-
-      console.log('Payment intent type:', typeof (latestInvoice as any).payment_intent);
-      const paymentIntent = (latestInvoice as any).payment_intent as Stripe.PaymentIntent;
-      if (!paymentIntent || typeof paymentIntent === 'string') {
-        console.error('Invalid payment intent:', paymentIntent);
-        console.error('Full invoice:', JSON.stringify(latestInvoice, null, 2));
-        throw new Error('Failed to create payment intent');
-      }
-
       res.json({
-        subscriptionId: subscription.id,
-        clientSecret: paymentIntent.client_secret,
+        sessionId: session.id,
+        url: session.url,
       });
     } catch (error: any) {
       console.error("Error creating subscription checkout:", error);
@@ -519,6 +510,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       switch (event.type) {
+        case 'checkout.session.completed': {
+          const session = event.data.object as Stripe.Checkout.Session;
+          
+          // Handle subscription checkout completion
+          if (session.mode === 'subscription' && session.subscription) {
+            const subscriptionId = typeof session.subscription === 'string' 
+              ? session.subscription 
+              : session.subscription.id;
+            
+            const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+            const customerId = typeof subscription.customer === 'string' 
+              ? subscription.customer 
+              : subscription.customer.id;
+            
+            const allUsers = await db.select().from(users).where(eq(users.stripeCustomerId, customerId));
+            const user = allUsers[0];
+            
+            if (user) {
+              const priceId = subscription.items.data[0]?.price.id;
+              let plan: 'starter' | 'pro' = 'starter';
+              let creditsTotal = '500';
+              
+              if (priceId === process.env.VITE_STRIPE_PRO_PRICE_ID) {
+                plan = 'pro';
+                creditsTotal = '1500';
+              }
+              
+              const existingSubscription = await storage.getUserSubscription(user.id);
+              
+              if (existingSubscription) {
+                // Update existing subscription
+                await storage.updateSubscription(existingSubscription.id, {
+                  plan,
+                  creditsTotal,
+                  stripeSubscriptionId: subscription.id,
+                  stripePriceId: priceId,
+                  status: 'active',
+                  billingPeriodStart: new Date(subscription.current_period_start * 1000).toISOString(),
+                  billingPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
+                  stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
+                });
+              } else {
+                // Create new subscription
+                await storage.createSubscription({
+                  userId: user.id,
+                  plan,
+                  creditsTotal,
+                  creditsUsed: '0',
+                  oneTimeCredits: '0',
+                  billingPeriodStart: new Date(subscription.current_period_start * 1000).toISOString(),
+                  billingPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
+                  status: 'active',
+                  stripeSubscriptionId: subscription.id,
+                  stripePriceId: priceId,
+                  stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
+                });
+              }
+              
+              console.log('Subscription created/updated via checkout.session.completed for user:', user.id);
+            }
+          }
+          break;
+        }
+
         case 'payment_intent.succeeded': {
           const paymentIntent = event.data.object as Stripe.PaymentIntent;
           
