@@ -117,7 +117,14 @@ To enable payments, you need to:
    - `VITE_STRIPE_PRO_PRICE_ID` - Stripe price ID for Pro plan ($49/mo, 1500 credits)
    - `STRIPE_WEBHOOK_SECRET` - Webhook signing secret for validating webhook events
 3. Configure Stripe webhook endpoint at: `https://your-app.replit.app/api/stripe/webhook`
-   - Events to listen for: `checkout.session.completed`, `payment_intent.succeeded`, `invoice.payment_succeeded`, `customer.subscription.deleted`
+   - **Critical Events:** The following webhook events MUST be enabled to ensure database sync:
+     - `checkout.session.completed` - Primary event for new subscription creation
+     - `customer.subscription.created` - Backup event for subscription creation
+     - `customer.subscription.updated` - For plan changes and renewals
+     - `invoice.payment_succeeded` - For recurring billing
+     - `payment_intent.succeeded` - For one-time credit purchases
+     - `customer.subscription.deleted` - For cancellations
+   - **Note:** If webhooks fail to sync, users can manually sync using the "Sync from Stripe" button on the Billing page (calls `/api/stripe/sync-subscription`)
 
 **Credit Packages:**
 Credit packages are defined in the database (`creditPackages` table). To add packages, insert records with:
