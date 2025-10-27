@@ -372,16 +372,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const existingSubscription = await storage.getUserSubscription(userId);
       if (!existingSubscription || !existingSubscription.stripeSubscriptionId) {
-        return res.status(404).json({ error: 'No active subscription found' });
+        return res.status(404).json({ 
+          error: 'No active subscription found',
+          code: 'NO_SUBSCRIPTION'
+        });
       }
 
-      // Get the Stripe subscription
-      const stripeSubscription = await stripe.subscriptions.retrieve(
-        existingSubscription.stripeSubscriptionId
-      );
+      // Validate that the Stripe subscription exists and is accessible
+      let stripeSubscription;
+      try {
+        console.log(`[UPDATE-SUBSCRIPTION] Validating Stripe subscription: ${existingSubscription.stripeSubscriptionId}`);
+        stripeSubscription = await stripe.subscriptions.retrieve(
+          existingSubscription.stripeSubscriptionId
+        );
+        console.log(`[UPDATE-SUBSCRIPTION] Subscription validated, status: ${stripeSubscription.status}`);
+      } catch (subscriptionError: any) {
+        console.error(`[UPDATE-SUBSCRIPTION] Invalid subscription ID ${existingSubscription.stripeSubscriptionId}:`, subscriptionError.message);
+        // Subscription doesn't exist in Stripe, clear it from database and return error
+        await storage.updateSubscription(existingSubscription.id, {
+          stripeSubscriptionId: null as any,
+        });
+        console.log(`[UPDATE-SUBSCRIPTION] Cleared invalid subscription ID from database`);
+        return res.status(404).json({ 
+          error: 'Stripe subscription not found. Please create a new subscription.',
+          code: 'INVALID_SUBSCRIPTION',
+          needsNewSubscription: true
+        });
+      }
 
       if (!stripeSubscription || stripeSubscription.status === 'canceled') {
-        return res.status(400).json({ error: 'Subscription is not active' });
+        return res.status(400).json({ 
+          error: 'Subscription is not active',
+          code: 'INACTIVE_SUBSCRIPTION'
+        });
       }
 
       // Update the subscription to the new price

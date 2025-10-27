@@ -194,12 +194,15 @@ export default function SubscribeCheckout() {
       setIsUpdatingExisting(true);
       
       apiRequest("POST", "/api/stripe/update-subscription", { plan, priceId })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.error) {
-            throw new Error(data.error);
+        .then((res) => {
+          if (!res.ok) {
+            return res.json().then(data => {
+              throw { message: data.error, code: data.code, needsNewSubscription: data.needsNewSubscription };
+            });
           }
-          
+          return res.json();
+        })
+        .then((data) => {
           // Invalidate subscription cache to update UI across all pages
           queryClient.invalidateQueries({ queryKey: ['/api/subscription'] });
           
@@ -213,7 +216,16 @@ export default function SubscribeCheckout() {
             setLocation('/billing');
           }, 1500);
         })
-        .catch((error) => {
+        .catch((error: any) => {
+          setIsUpdatingExisting(false);
+          
+          // If subscription is invalid, fall back to creating new checkout
+          if (error.code === 'INVALID_SUBSCRIPTION' || error.needsNewSubscription) {
+            console.log('[PLAN-CHANGE] Invalid subscription ID, falling back to checkout...');
+            // Let the effect re-run and go through the checkout flow
+            return;
+          }
+          
           toast({
             title: "Update Error",
             description: error.message,
