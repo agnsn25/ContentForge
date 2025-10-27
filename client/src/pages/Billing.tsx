@@ -61,7 +61,6 @@ export default function Billing() {
   const { toast } = useToast();
   const { user, isAuthenticated, isLoading } = useAuth();
   const [, setLocation] = useLocation();
-  const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -323,7 +322,7 @@ export default function Billing() {
                 </div>
               </div>
 
-              <div className="pt-4 space-y-2">
+              <div className="pt-4">
                 <Button 
                   variant="outline" 
                   className="w-full" 
@@ -332,39 +331,6 @@ export default function Billing() {
                 >
                   <TrendingUp className="h-4 w-4 mr-2" />
                   Change Plan
-                </Button>
-                <Button 
-                  variant="secondary" 
-                  className="w-full" 
-                  onClick={async () => {
-                    setIsSyncing(true);
-                    try {
-                      const response = await apiRequest("POST", "/api/stripe/sync-subscription", {});
-                      const data = await response.json();
-                      if (data.error) {
-                        throw new Error(data.error);
-                      }
-                      toast({
-                        title: "Sync Successful",
-                        description: `Your subscription has been synced: ${data.subscription?.plan || 'Unknown'} plan`,
-                      });
-                      queryClient.invalidateQueries({ queryKey: ['/api/billing/dashboard'] });
-                      queryClient.invalidateQueries({ queryKey: ['/api/subscription'] });
-                    } catch (error: any) {
-                      toast({
-                        title: "Sync Failed",
-                        description: error.message || "Failed to sync subscription from Stripe",
-                        variant: "destructive",
-                      });
-                    } finally {
-                      setIsSyncing(false);
-                    }
-                  }}
-                  disabled={isSyncing}
-                  data-testid="button-sync-subscription"
-                >
-                  <Calendar className="h-4 w-4 mr-2" />
-                  {isSyncing ? "Syncing..." : "Sync from Stripe"}
                 </Button>
               </div>
             </CardContent>
