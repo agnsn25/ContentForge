@@ -570,9 +570,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 stripeSubscriptionId: subscription.id,
                 stripePriceId: priceId,
                 status: 'active',
-                billingPeriodStart: new Date(subscription.current_period_start * 1000).toISOString(),
-                billingPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
-                stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
+                billingPeriodStart: new Date(subscription.current_period_start * 1000),
+                billingPeriodEnd: new Date(subscription.current_period_end * 1000),
+                stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
               });
               console.log(`[WEBHOOK] Successfully updated subscription for user ${user.id}`);
             } else {
@@ -584,12 +584,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 creditsTotal,
                 creditsUsed: '0',
                 oneTimeCredits: '0',
-                billingPeriodStart: new Date(subscription.current_period_start * 1000).toISOString(),
-                billingPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
+                billingPeriodStart: new Date(subscription.current_period_start * 1000),
+                billingPeriodEnd: new Date(subscription.current_period_end * 1000),
                 status: 'active',
                 stripeSubscriptionId: subscription.id,
                 stripePriceId: priceId,
-                stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
+                stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
               });
               console.log(`[WEBHOOK] Successfully created subscription for user ${user.id}`);
             }
