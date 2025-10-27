@@ -108,6 +108,16 @@ ContentHammer is a full-stack application built with React and TypeScript for th
   - New subscriptions use Stripe Checkout Sessions (hosted payment page)
   - Plan switching for users with valid Stripe subscription IDs uses Stripe Subscriptions API directly
   - Subscriptions without Stripe IDs (legacy/test data) automatically route through new checkout flow
+- **Auto-Sync Functionality:**
+  - When users attempt plan changes, the system automatically detects if `stripe_subscription_id` is NULL
+  - Triggers seamless background sync from Stripe to populate missing subscription data
+  - **Stale Customer ID Handling:** If a user's `stripe_customer_id` is invalid or missing in Stripe:
+    - System automatically creates a new Stripe customer using the user's email
+    - Updates database with the new valid customer ID
+    - Gracefully falls back to new checkout flow if no Stripe subscriptions exist
+  - **User Experience:** Entire auto-sync process is transparent with loading states ("Syncing your subscription from Stripe...")
+  - **Error Recovery:** If sync fails or finds no subscriptions, automatically redirects to new subscription checkout
+  - **No Manual Intervention:** Users never need to click "Sync from Stripe" button manually - it happens automatically during plan changes
 
 **Setup Requirements:**
 To enable payments, you need to:
@@ -118,13 +128,15 @@ To enable payments, you need to:
    - `STRIPE_WEBHOOK_SECRET` - Webhook signing secret for validating webhook events
 3. Configure Stripe webhook endpoint at: `https://your-app.replit.app/api/stripe/webhook`
    - **Critical Events:** The following webhook events MUST be enabled to ensure database sync:
-     - `checkout.session.completed` - Primary event for new subscription creation
-     - `customer.subscription.created` - Backup event for subscription creation
-     - `customer.subscription.updated` - For plan changes and renewals
-     - `invoice.payment_succeeded` - For recurring billing
-     - `payment_intent.succeeded` - For one-time credit purchases
-     - `customer.subscription.deleted` - For cancellations
-   - **Note:** If webhooks fail to sync, users can manually sync using the "Sync from Stripe" button on the Billing page (calls `/api/stripe/sync-subscription`)
+     - `checkout.session.completed` - Primary event for new subscription creation via Checkout Sessions
+     - `customer.subscription.created` - Backup event for subscription creation, ensures database sync
+     - `customer.subscription.updated` - **CRITICAL** for plan changes via Stripe API, handles proration and renewals
+     - `invoice.payment_succeeded` - For recurring billing and subscription renewals
+     - `payment_intent.succeeded` - For one-time credit pack purchases
+     - `customer.subscription.deleted` - For subscription cancellations
+   - **Why customer.subscription.updated is Critical:** When users change plans via the direct Stripe API update (not Checkout), only this webhook fires. Without it, plan changes won't sync to the database, causing NULL `stripe_subscription_id` issues.
+   - **Comprehensive Logging:** All webhook handlers include detailed logging for debugging: customer ID lookups, plan determination, database operations, and error states
+   - **Manual Sync (Fallback):** Users can manually sync using the "Sync from Stripe" button on the Billing page if needed (calls `/api/stripe/sync-subscription`)
 
 **Credit Packages:**
 Credit packages are defined in the database (`creditPackages` table). To add packages, insert records with:
