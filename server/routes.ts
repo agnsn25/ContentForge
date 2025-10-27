@@ -878,20 +878,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
           break;
         }
 
+        case 'customer.subscription.updated': {
+          const subscription = event.data.object as any;
+          console.log(`[WEBHOOK] Customer subscription updated - ID: ${subscription.id}, status: ${subscription.status}`);
+          
+          const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
+          console.log(`[WEBHOOK] Looking up user with customer ID: ${customerId}`);
+          
+          const allUsers = await db.select().from(users).where(eq(users.stripeCustomerId, customerId));
+          const user = allUsers[0];
+          
+          if (!user) {
+            console.error(`[WEBHOOK] No user found with Stripe customer ID: ${customerId}`);
+            return res.status(200).json({ received: true, error: 'User not found' });
+          }
+          
+          console.log(`[WEBHOOK] Found user: ${user.id} (${user.email})`);
+          
+          const priceId = subscription.items.data[0]?.price.id;
+          console.log(`[WEBHOOK] Subscription price ID: ${priceId}`);
+          
+          let plan: 'starter' | 'pro' = 'starter';
+          let creditsTotal = '500';
+          
+          if (priceId === process.env.VITE_STRIPE_PRO_PRICE_ID) {
+            plan = 'pro';
+            creditsTotal = '1500';
+          }
+          
+          console.log(`[WEBHOOK] Determined plan: ${plan}, credits: ${creditsTotal}, status: ${subscription.status}`);
+          
+          const existingSubscription = await storage.getUserSubscription(user.id);
+          
+          if (existingSubscription) {
+            console.log(`[WEBHOOK] Updating subscription ${existingSubscription.id} - plan change from ${existingSubscription.plan} to ${plan}`);
+            
+            // Safely convert timestamps with null checks
+            const billingPeriodStart = subscription.current_period_start 
+              ? new Date(subscription.current_period_start * 1000)
+              : new Date();
+            
+            const billingPeriodEnd = subscription.current_period_end 
+              ? new Date(subscription.current_period_end * 1000)
+              : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+            
+            await storage.updateSubscription(existingSubscription.id, {
+              plan,
+              creditsTotal,
+              status: subscription.status as any,
+              stripeSubscriptionId: subscription.id,
+              stripePriceId: priceId,
+              billingPeriodStart,
+              billingPeriodEnd,
+              stripeCurrentPeriodEnd: billingPeriodEnd,
+            });
+            console.log(`[WEBHOOK] Successfully updated subscription for user ${user.id}`);
+          } else {
+            console.log(`[WEBHOOK] No existing subscription found for user ${user.id}, creating new one`);
+            
+            const billingPeriodStart = subscription.current_period_start 
+              ? new Date(subscription.current_period_start * 1000)
+              : new Date();
+            
+            const billingPeriodEnd = subscription.current_period_end 
+              ? new Date(subscription.current_period_end * 1000)
+              : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+            
+            await storage.createSubscription({
+              userId: user.id,
+              plan,
+              creditsTotal,
+              creditsUsed: '0',
+              oneTimeCredits: '0',
+              billingPeriodStart,
+              billingPeriodEnd,
+              status: subscription.status as any,
+              stripeSubscriptionId: subscription.id,
+              stripePriceId: priceId,
+              stripeCurrentPeriodEnd: billingPeriodEnd,
+            });
+            console.log(`[WEBHOOK] Successfully created subscription for user ${user.id}`);
+          }
+          
+          await storage.updateUserStripeInfo(user.id, customerId, subscription.id);
+          console.log(`[WEBHOOK] Updated user Stripe info for user ${user.id}`);
+          break;
+        }
+
         case 'customer.subscription.deleted': {
           const subscription = event.data.object as Stripe.Subscription;
+          console.log(`[WEBHOOK] Customer subscription deleted - ID: ${subscription.id}`);
+          
           const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
+          console.log(`[WEBHOOK] Looking up user with customer ID: ${customerId}`);
           
           const allUsers = await db.select().from(users).where(eq(users.stripeCustomerId, customerId));
           const user = allUsers[0];
           
           if (user) {
+            console.log(`[WEBHOOK] Found user: ${user.id} (${user.email})`);
             const existingSubscription = await storage.getUserSubscription(user.id);
             if (existingSubscription) {
+              console.log(`[WEBHOOK] Marking subscription ${existingSubscription.id} as cancelled`);
               await storage.updateSubscription(existingSubscription.id, {
                 status: 'cancelled',
               });
+              console.log(`[WEBHOOK] Successfully cancelled subscription for user ${user.id}`);
+            } else {
+              console.log(`[WEBHOOK] No subscription found for user ${user.id}`);
             }
+          } else {
+            console.log(`[WEBHOOK] No user found with customer ID: ${customerId}`);
           }
           break;
         }
