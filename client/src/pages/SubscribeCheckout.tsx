@@ -203,8 +203,9 @@ export default function SubscribeCheckout() {
           return res.json();
         })
         .then((data) => {
-          // Invalidate subscription cache to update UI across all pages
+          // Invalidate subscription and billing cache to update UI across all pages
           queryClient.invalidateQueries({ queryKey: ['/api/subscription'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/billing/dashboard'] });
           
           toast({
             title: "Plan Updated!",
@@ -249,8 +250,9 @@ export default function SubscribeCheckout() {
                     throw new Error(updateData.error);
                   }
                   
-                  // Invalidate subscription cache to update UI across all pages
+                  // Invalidate subscription and billing cache to update UI across all pages
                   queryClient.invalidateQueries({ queryKey: ['/api/subscription'] });
+                  queryClient.invalidateQueries({ queryKey: ['/api/billing/dashboard'] });
                   
                   toast({
                     title: "Plan Updated!",
