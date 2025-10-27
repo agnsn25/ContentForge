@@ -616,10 +616,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         case 'invoice.payment_succeeded': {
           const invoice = event.data.object as any;
-          console.log(`[WEBHOOK] Invoice payment succeeded - subscription: ${invoice.subscription}`);
+          console.log(`[WEBHOOK] Invoice payment succeeded`);
+          console.log(`[WEBHOOK] Invoice subscription field:`, invoice.subscription);
+          console.log(`[WEBHOOK] Invoice subscription type:`, typeof invoice.subscription);
+          console.log(`[WEBHOOK] Full invoice object keys:`, Object.keys(invoice).slice(0, 20));
           
           const subscriptionId = invoice.subscription;
+          console.log(`[WEBHOOK] Extracted subscriptionId:`, subscriptionId, `Type:`, typeof subscriptionId);
+          
           if (subscriptionId && typeof subscriptionId === 'string') {
+            console.log(`[WEBHOOK] Condition passed - processing subscription`);
             console.log(`[WEBHOOK] Retrieving subscription: ${subscriptionId}`);
             const subscription = await stripe.subscriptions.retrieve(subscriptionId) as any;
             const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
