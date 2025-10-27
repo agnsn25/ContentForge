@@ -322,6 +322,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.updateUserStripeCustomerId(userId, customerId);
       }
 
+      console.log('Creating Stripe subscription for customer:', customerId, 'with price:', priceId);
       const subscription = await stripe.subscriptions.create({
         customer: customerId,
         items: [{
@@ -332,13 +333,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         expand: ['latest_invoice.payment_intent'],
       });
 
+      console.log('Subscription created:', subscription.id);
+      console.log('Latest invoice type:', typeof subscription.latest_invoice);
+      
       const latestInvoice = subscription.latest_invoice as Stripe.Invoice;
       if (!latestInvoice || typeof latestInvoice === 'string') {
+        console.error('Invalid invoice:', latestInvoice);
         throw new Error('Failed to create subscription invoice');
       }
 
+      console.log('Payment intent type:', typeof (latestInvoice as any).payment_intent);
       const paymentIntent = (latestInvoice as any).payment_intent as Stripe.PaymentIntent;
       if (!paymentIntent || typeof paymentIntent === 'string') {
+        console.error('Invalid payment intent:', paymentIntent);
+        console.error('Full invoice:', JSON.stringify(latestInvoice, null, 2));
         throw new Error('Failed to create payment intent');
       }
 
