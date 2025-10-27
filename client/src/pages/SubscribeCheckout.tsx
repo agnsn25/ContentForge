@@ -150,12 +150,15 @@ export default function SubscribeCheckout() {
       console.log('[AUTO-SYNC] Detected subscription without Stripe ID, syncing...');
       
       apiRequest("POST", "/api/stripe/sync-subscription", {})
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.error) {
-            throw new Error(data.error);
+        .then((res) => {
+          if (!res.ok) {
+            return res.json().then(data => {
+              throw { message: data.error, code: data.code, needsNewSubscription: data.needsNewSubscription };
+            });
           }
-          
+          return res.json();
+        })
+        .then((data) => {
           console.log('[AUTO-SYNC] Sync successful, refetching subscription...');
           
           // Refetch subscription data to get the updated Stripe ID
@@ -166,19 +169,25 @@ export default function SubscribeCheckout() {
           // with updated data and proceed to update flow
           setIsSyncing(false);
         })
-        .catch((error) => {
+        .catch((error: any) => {
           console.error('[AUTO-SYNC] Sync failed:', error);
           setIsSyncing(false);
           
-          // If sync fails, fall back to creating new checkout
-          toast({
-            title: "Sync Warning",
-            description: "Could not sync existing subscription. Proceeding with new checkout.",
-            variant: "default",
-          });
+          // If no Stripe subscription found, fall back to creating new checkout
+          if (error.code === 'NO_SUBSCRIPTIONS' || error.needsNewSubscription) {
+            console.log('[AUTO-SYNC] No Stripe subscription found, creating new checkout...');
+            // Let the effect continue to create new checkout flow
+          } else {
+            // For other errors, show warning
+            toast({
+              title: "Sync Warning",
+              description: "Could not sync existing subscription. Proceeding with new checkout.",
+              variant: "default",
+            });
+          }
         });
       
-      return; // Exit early, will re-run after refetch
+      return; // Exit early, will re-run after refetch or continue to checkout
     }
 
     if (hasStripeSubscription) {

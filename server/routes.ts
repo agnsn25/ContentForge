@@ -437,9 +437,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`[SYNC] Syncing subscriptions for user ${userId}, customer: ${user.stripeCustomerId}`);
 
+      // Validate that the Stripe customer exists and handle stale/invalid customer IDs
+      let customerId = user.stripeCustomerId;
+      let needsCustomerUpdate = false;
+      
+      try {
+        console.log(`[SYNC] Validating Stripe customer: ${customerId}`);
+        await stripe.customers.retrieve(customerId);
+        console.log(`[SYNC] Customer validated successfully`);
+      } catch (customerError: any) {
+        console.warn(`[SYNC] Invalid customer ID ${customerId}: ${customerError.message}`);
+        console.log(`[SYNC] Creating new Stripe customer for user ${userId}`);
+        
+        // Create new customer if the old one is invalid
+        const newCustomer = await stripe.customers.create({
+          email: user.email || undefined,
+          metadata: {
+            userId: user.id,
+          },
+        });
+        
+        customerId = newCustomer.id;
+        needsCustomerUpdate = true;
+        console.log(`[SYNC] Created new customer: ${customerId}`);
+      }
+
       // Get all subscriptions for this customer from Stripe
       const subscriptions = await stripe.subscriptions.list({
-        customer: user.stripeCustomerId,
+        customer: customerId,
         status: 'all',
         limit: 10,
       });
@@ -447,7 +472,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`[SYNC] Found ${subscriptions.data.length} Stripe subscriptions`);
 
       if (subscriptions.data.length === 0) {
-        return res.status(404).json({ error: 'No Stripe subscriptions found for this customer' });
+        console.log(`[SYNC] No Stripe subscriptions found for customer ${customerId}`);
+        
+        // If customer was recreated, update the database
+        if (needsCustomerUpdate) {
+          await storage.updateUserStripeCustomerId(userId, customerId);
+          console.log(`[SYNC] Updated user with new customer ID: ${customerId}`);
+        }
+        
+        return res.status(404).json({ 
+          error: 'No Stripe subscriptions found. Please create a new subscription.',
+          code: 'NO_SUBSCRIPTIONS',
+          needsNewSubscription: true
+        });
       }
 
       // Find the most recent active subscription
@@ -511,7 +548,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      await storage.updateUserStripeInfo(userId, user.stripeCustomerId, activeSubscription.id);
+      // Update customer ID if it was recreated
+      if (needsCustomerUpdate) {
+        await storage.updateUserStripeCustomerId(userId, customerId);
+        console.log(`[SYNC] Updated user with new customer ID: ${customerId}`);
+      }
+      
+      await storage.updateUserStripeInfo(userId, customerId, activeSubscription.id);
 
       console.log(`[SYNC] Successfully synced subscription for user ${userId}`);
 
