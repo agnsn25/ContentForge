@@ -98,6 +98,7 @@ const CheckoutForm = ({ plan, amount }: CheckoutFormProps) => {
 export default function SubscribeCheckout() {
   const [clientSecret, setClientSecret] = useState("");
   const [isUpdatingExisting, setIsUpdatingExisting] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   
@@ -113,7 +114,7 @@ export default function SubscribeCheckout() {
   const currentPlan = planDetails[plan as keyof typeof planDetails] || planDetails.starter;
 
   // Check if user has an active subscription
-  const { data: subscriptionData } = useQuery({
+  const { data: subscriptionData, refetch: refetchSubscription } = useQuery({
     queryKey: ['/api/subscription'],
   });
 
@@ -133,11 +134,52 @@ export default function SubscribeCheckout() {
       return;
     }
 
-    // If user has an active subscription WITH a Stripe subscription ID, update it
-    // Otherwise, create a new Stripe subscription (even if they have a DB record)
+    // Check if user has subscription but missing Stripe subscription ID (needs sync)
+    const hasSubscriptionWithoutStripeId = subscriptionData?.hasSubscription && 
+                                            subscriptionData?.subscription?.status === 'active' &&
+                                            !subscriptionData?.subscription?.stripeSubscriptionId;
+
+    // Check if user has complete subscription data
     const hasStripeSubscription = subscriptionData?.hasSubscription && 
                                    subscriptionData?.subscription?.status === 'active' &&
                                    subscriptionData?.subscription?.stripeSubscriptionId;
+
+    // AUTO-SYNC: If subscription exists but missing Stripe ID, sync first
+    if (hasSubscriptionWithoutStripeId && !isSyncing) {
+      setIsSyncing(true);
+      console.log('[AUTO-SYNC] Detected subscription without Stripe ID, syncing...');
+      
+      apiRequest("POST", "/api/stripe/sync-subscription", {})
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.error) {
+            throw new Error(data.error);
+          }
+          
+          console.log('[AUTO-SYNC] Sync successful, refetching subscription...');
+          
+          // Refetch subscription data to get the updated Stripe ID
+          return refetchSubscription();
+        })
+        .then(() => {
+          // After successful sync and refetch, the effect will re-run
+          // with updated data and proceed to update flow
+          setIsSyncing(false);
+        })
+        .catch((error) => {
+          console.error('[AUTO-SYNC] Sync failed:', error);
+          setIsSyncing(false);
+          
+          // If sync fails, fall back to creating new checkout
+          toast({
+            title: "Sync Warning",
+            description: "Could not sync existing subscription. Proceeding with new checkout.",
+            variant: "default",
+          });
+        });
+      
+      return; // Exit early, will re-run after refetch
+    }
 
     if (hasStripeSubscription) {
       setIsUpdatingExisting(true);
@@ -212,7 +254,18 @@ export default function SubscribeCheckout() {
           setLocation('/pricing');
         });
     }
-  }, [plan, priceId, toast, setLocation, subscriptionData, currentPlan.name]);
+  }, [plan, priceId, toast, setLocation, subscriptionData, currentPlan.name, isSyncing, refetchSubscription]);
+
+  if (isSyncing) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+          <p className="text-muted-foreground" data-testid="text-syncing-subscription">Syncing your subscription from Stripe...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (isUpdatingExisting) {
     return (
