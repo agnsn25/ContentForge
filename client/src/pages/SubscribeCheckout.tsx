@@ -1,7 +1,7 @@
 import { useStripe, Elements, PaymentElement, useElements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import { useEffect, useState } from 'react';
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
@@ -200,6 +200,9 @@ export default function SubscribeCheckout() {
             throw new Error(data.error);
           }
           
+          // Invalidate subscription cache to update UI across all pages
+          queryClient.invalidateQueries({ queryKey: ['/api/subscription'] });
+          
           toast({
             title: "Plan Updated!",
             description: `Your subscription has been switched to the ${currentPlan.name} plan.`,
@@ -233,6 +236,9 @@ export default function SubscribeCheckout() {
                   if (updateData.error) {
                     throw new Error(updateData.error);
                   }
+                  
+                  // Invalidate subscription cache to update UI across all pages
+                  queryClient.invalidateQueries({ queryKey: ['/api/subscription'] });
                   
                   toast({
                     title: "Plan Updated!",
