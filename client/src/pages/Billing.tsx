@@ -307,6 +307,10 @@ export default function Billing() {
                     {format(new Date(subscription.billingPeriodStart), "MMM d")} - {format(new Date(subscription.billingPeriodEnd), "MMM d, yyyy")}
                   </span>
                 </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Used Credits</span>
+                  <span className="font-medium" data-testid="text-used-credits">{subscription.creditsUsed} of {subscription.creditsTotal}</span>
+                </div>
               </div>
 
               <div className="space-y-2">
