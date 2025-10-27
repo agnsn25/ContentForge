@@ -1,8 +1,9 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -60,6 +61,7 @@ export default function Billing() {
   const { toast } = useToast();
   const { user, isAuthenticated, isLoading } = useAuth();
   const [, setLocation] = useLocation();
+  const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -321,10 +323,48 @@ export default function Billing() {
                 </div>
               </div>
 
-              <div className="pt-4">
-                <Button variant="outline" className="w-full" data-testid="button-change-plan">
+              <div className="pt-4 space-y-2">
+                <Button 
+                  variant="outline" 
+                  className="w-full" 
+                  onClick={() => setLocation('/pricing')}
+                  data-testid="button-change-plan"
+                >
                   <TrendingUp className="h-4 w-4 mr-2" />
                   Change Plan
+                </Button>
+                <Button 
+                  variant="secondary" 
+                  className="w-full" 
+                  onClick={async () => {
+                    setIsSyncing(true);
+                    try {
+                      const response = await apiRequest("POST", "/api/stripe/sync-subscription", {});
+                      const data = await response.json();
+                      if (data.error) {
+                        throw new Error(data.error);
+                      }
+                      toast({
+                        title: "Sync Successful",
+                        description: `Your subscription has been synced: ${data.subscription?.plan || 'Unknown'} plan`,
+                      });
+                      queryClient.invalidateQueries({ queryKey: ['/api/billing/dashboard'] });
+                      queryClient.invalidateQueries({ queryKey: ['/api/subscription'] });
+                    } catch (error: any) {
+                      toast({
+                        title: "Sync Failed",
+                        description: error.message || "Failed to sync subscription from Stripe",
+                        variant: "destructive",
+                      });
+                    } finally {
+                      setIsSyncing(false);
+                    }
+                  }}
+                  disabled={isSyncing}
+                  data-testid="button-sync-subscription"
+                >
+                  <Calendar className="h-4 w-4 mr-2" />
+                  {isSyncing ? "Syncing..." : "Sync from Stripe"}
                 </Button>
               </div>
             </CardContent>

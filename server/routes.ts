@@ -421,6 +421,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Manual sync endpoint - Syncs Stripe subscription to database
+  app.post('/api/stripe/sync-subscription', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      if (!user.stripeCustomerId) {
+        return res.status(404).json({ error: 'No Stripe customer found for this user' });
+      }
+
+      console.log(`[SYNC] Syncing subscriptions for user ${userId}, customer: ${user.stripeCustomerId}`);
+
+      // Get all subscriptions for this customer from Stripe
+      const subscriptions = await stripe.subscriptions.list({
+        customer: user.stripeCustomerId,
+        status: 'all',
+        limit: 10,
+      });
+
+      console.log(`[SYNC] Found ${subscriptions.data.length} Stripe subscriptions`);
+
+      if (subscriptions.data.length === 0) {
+        return res.status(404).json({ error: 'No Stripe subscriptions found for this customer' });
+      }
+
+      // Find the most recent active subscription
+      const activeSubscription = subscriptions.data.find(sub => sub.status === 'active') || subscriptions.data[0];
+      
+      console.log(`[SYNC] Using subscription: ${activeSubscription.id}, status: ${activeSubscription.status}`);
+
+      const priceId = activeSubscription.items.data[0]?.price.id;
+      console.log(`[SYNC] Price ID: ${priceId}`);
+
+      let plan: 'starter' | 'pro' = 'starter';
+      let creditsTotal = '500';
+      
+      if (priceId === process.env.VITE_STRIPE_PRO_PRICE_ID) {
+        plan = 'pro';
+        creditsTotal = '1500';
+      }
+
+      console.log(`[SYNC] Determined plan: ${plan}, credits: ${creditsTotal}`);
+
+      // Update or create subscription in database
+      const existingSubscription = await storage.getUserSubscription(userId);
+      
+      if (existingSubscription) {
+        console.log(`[SYNC] Updating existing subscription ${existingSubscription.id}`);
+        await storage.updateSubscription(existingSubscription.id, {
+          plan,
+          creditsTotal,
+          stripeSubscriptionId: activeSubscription.id,
+          stripePriceId: priceId,
+          status: activeSubscription.status as any,
+          billingPeriodStart: new Date(activeSubscription.current_period_start * 1000),
+          billingPeriodEnd: new Date(activeSubscription.current_period_end * 1000),
+          stripeCurrentPeriodEnd: new Date(activeSubscription.current_period_end * 1000),
+        });
+      } else {
+        console.log(`[SYNC] Creating new subscription`);
+        await storage.createSubscription({
+          userId,
+          plan,
+          creditsTotal,
+          creditsUsed: '0',
+          oneTimeCredits: '0',
+          stripeSubscriptionId: activeSubscription.id,
+          stripePriceId: priceId,
+          status: activeSubscription.status as any,
+          billingPeriodStart: new Date(activeSubscription.current_period_start * 1000),
+          billingPeriodEnd: new Date(activeSubscription.current_period_end * 1000),
+          stripeCurrentPeriodEnd: new Date(activeSubscription.current_period_end * 1000),
+        });
+      }
+
+      await storage.updateUserStripeInfo(userId, user.stripeCustomerId, activeSubscription.id);
+
+      console.log(`[SYNC] Successfully synced subscription for user ${userId}`);
+
+      res.json({
+        success: true,
+        message: 'Subscription synced successfully',
+        subscription: {
+          plan,
+          stripeSubscriptionId: activeSubscription.id,
+          status: activeSubscription.status,
+        },
+      });
+    } catch (error: any) {
+      console.error("[SYNC] Error syncing subscription:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Stripe routes - Credit pack checkout
   app.post('/api/stripe/create-credit-pack-checkout', isAuthenticated, async (req: any, res) => {
     try {
