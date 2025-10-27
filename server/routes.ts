@@ -697,6 +697,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
           break;
         }
 
+        case 'customer.subscription.created': {
+          const subscription = event.data.object as any;
+          console.log(`[WEBHOOK] Customer subscription created - ID: ${subscription.id}`);
+          
+          const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
+          console.log(`[WEBHOOK] Looking up user with customer ID: ${customerId}`);
+          
+          const allUsers = await db.select().from(users).where(eq(users.stripeCustomerId, customerId));
+          const user = allUsers[0];
+          
+          if (!user) {
+            console.error(`[WEBHOOK] No user found with Stripe customer ID: ${customerId}`);
+            return res.status(200).json({ received: true, error: 'User not found' });
+          }
+          
+          console.log(`[WEBHOOK] Found user: ${user.id} (${user.email})`);
+          
+          const priceId = subscription.items.data[0]?.price.id;
+          console.log(`[WEBHOOK] Subscription price ID: ${priceId}`);
+          console.log(`[WEBHOOK] VITE_STRIPE_STARTER_PRICE_ID: ${process.env.VITE_STRIPE_STARTER_PRICE_ID}`);
+          console.log(`[WEBHOOK] VITE_STRIPE_PRO_PRICE_ID: ${process.env.VITE_STRIPE_PRO_PRICE_ID}`);
+          
+          let plan: 'starter' | 'pro' = 'starter';
+          let creditsTotal = '500';
+          
+          if (priceId === process.env.VITE_STRIPE_PRO_PRICE_ID) {
+            plan = 'pro';
+            creditsTotal = '1500';
+          }
+          
+          console.log(`[WEBHOOK] Determined plan: ${plan}, credits: ${creditsTotal}`);
+          
+          const existingSubscription = await storage.getUserSubscription(user.id);
+          console.log(`[WEBHOOK] Existing subscription:`, existingSubscription ? `ID ${existingSubscription.id}, plan ${existingSubscription.plan}` : 'none');
+          
+          if (existingSubscription) {
+            console.log(`[WEBHOOK] Updating existing subscription ${existingSubscription.id}`);
+            await storage.updateSubscription(existingSubscription.id, {
+              plan,
+              creditsTotal,
+              status: 'active',
+              stripeSubscriptionId: subscription.id,
+              stripePriceId: priceId,
+              billingPeriodStart: new Date(subscription.current_period_start * 1000),
+              billingPeriodEnd: new Date(subscription.current_period_end * 1000),
+              stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
+              creditsUsed: '0',
+            });
+            console.log(`[WEBHOOK] Successfully updated subscription for user ${user.id}`);
+          } else {
+            console.log(`[WEBHOOK] Creating new subscription for user ${user.id}`);
+            await storage.createSubscription({
+              userId: user.id,
+              plan,
+              creditsTotal,
+              creditsUsed: '0',
+              oneTimeCredits: '0',
+              billingPeriodStart: new Date(subscription.current_period_start * 1000),
+              billingPeriodEnd: new Date(subscription.current_period_end * 1000),
+              status: 'active',
+              stripeSubscriptionId: subscription.id,
+              stripePriceId: priceId,
+              stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
+            });
+            console.log(`[WEBHOOK] Successfully created subscription for user ${user.id}`);
+          }
+          
+          await storage.updateUserStripeInfo(user.id, customerId, subscription.id);
+          console.log(`[WEBHOOK] Updated user Stripe info for user ${user.id}`);
+          break;
+        }
+
         case 'customer.subscription.deleted': {
           const subscription = event.data.object as Stripe.Subscription;
           const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
