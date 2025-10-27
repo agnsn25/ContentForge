@@ -468,6 +468,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`[SYNC] Determined plan: ${plan}, credits: ${creditsTotal}`);
 
+      // Safely convert Stripe timestamps to Date objects
+      const billingPeriodStart = activeSubscription.current_period_start 
+        ? new Date(activeSubscription.current_period_start * 1000)
+        : new Date();
+      
+      const billingPeriodEnd = activeSubscription.current_period_end 
+        ? new Date(activeSubscription.current_period_end * 1000)
+        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // Default to 30 days from now
+
+      console.log(`[SYNC] Billing period: ${billingPeriodStart.toISOString()} to ${billingPeriodEnd.toISOString()}`);
+
       // Update or create subscription in database
       const existingSubscription = await storage.getUserSubscription(userId);
       
@@ -479,9 +490,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           stripeSubscriptionId: activeSubscription.id,
           stripePriceId: priceId,
           status: activeSubscription.status as any,
-          billingPeriodStart: new Date(activeSubscription.current_period_start * 1000),
-          billingPeriodEnd: new Date(activeSubscription.current_period_end * 1000),
-          stripeCurrentPeriodEnd: new Date(activeSubscription.current_period_end * 1000),
+          billingPeriodStart,
+          billingPeriodEnd,
+          stripeCurrentPeriodEnd: billingPeriodEnd,
         });
       } else {
         console.log(`[SYNC] Creating new subscription`);
@@ -494,9 +505,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           stripeSubscriptionId: activeSubscription.id,
           stripePriceId: priceId,
           status: activeSubscription.status as any,
-          billingPeriodStart: new Date(activeSubscription.current_period_start * 1000),
-          billingPeriodEnd: new Date(activeSubscription.current_period_end * 1000),
-          stripeCurrentPeriodEnd: new Date(activeSubscription.current_period_end * 1000),
+          billingPeriodStart,
+          billingPeriodEnd,
+          stripeCurrentPeriodEnd: billingPeriodEnd,
         });
       }
 
