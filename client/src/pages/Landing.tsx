@@ -107,9 +107,9 @@ export default function Landing() {
             <div className="h-12 w-12 rounded-lg bg-secondary/10 flex items-center justify-center">
               <Globe className="h-6 w-6 text-secondary" />
             </div>
-            <h3 className="font-semibold text-lg">GEO Targeting</h3>
+            <h3 className="font-semibold text-lg">Generative Engine Optimization</h3>
             <p className="text-sm text-muted-foreground">
-              Optimize content for different regions and languages. Reach global audiences effectively.
+              Content optimized for AI search engines and language models. Maximize your visibility in the AI era.
             </p>
           </Card>
         </div>
