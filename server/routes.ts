@@ -1497,7 +1497,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Check if user has sufficient credits
         const creditsUsed = parseInt(subscription.creditsUsed);
         const creditsTotal = parseInt(subscription.creditsTotal);
-        const creditsRemaining = creditsTotal - creditsUsed;
+        const oneTimeCredits = parseInt(subscription.oneTimeCredits);
+        const subscriptionCreditsRemaining = creditsTotal - creditsUsed;
+        const creditsRemaining = subscriptionCreditsRemaining + oneTimeCredits;
 
         if (creditsRemaining < totalCredits) {
           return res.status(403).json({ 
