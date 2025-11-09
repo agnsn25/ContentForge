@@ -202,7 +202,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (subscription) {
           const creditsUsed = parseInt(subscription.creditsUsed);
           const creditsTotal = parseInt(subscription.creditsTotal);
-          creditsRemaining = creditsTotal - creditsUsed;
+          const oneTimeCredits = parseInt(subscription.oneTimeCredits);
+          const subscriptionCreditsRemaining = creditsTotal - creditsUsed;
+          creditsRemaining = subscriptionCreditsRemaining + oneTimeCredits;
           hasSufficientCredits = creditsRemaining >= creditsRequired;
         }
       }
