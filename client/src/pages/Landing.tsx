@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Sparkles, Zap, Clock, Shield } from "lucide-react";
+import { Sparkles, Zap, Clock, Shield, Globe } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import logoUrl from "@assets/hammer-logo.png";
 
@@ -62,7 +62,7 @@ export default function Landing() {
         <h2 className="text-3xl font-bold text-center mb-12" data-testid="heading-features">
           Why Choose ContentHammer?
         </h2>
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6 max-w-7xl mx-auto">
           <Card className="p-6 space-y-4" data-testid="card-feature-ai">
             <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
               <Sparkles className="h-6 w-6 text-primary" />
@@ -102,6 +102,16 @@ export default function Landing() {
               Your content is encrypted and secure. We never share your data.
             </p>
           </Card>
+
+          <Card className="p-6 space-y-4" data-testid="card-feature-geo">
+            <div className="h-12 w-12 rounded-lg bg-secondary/10 flex items-center justify-center">
+              <Globe className="h-6 w-6 text-secondary" />
+            </div>
+            <h3 className="font-semibold text-lg">GEO Targeting</h3>
+            <p className="text-sm text-muted-foreground">
+              Optimize content for different regions and languages. Reach global audiences effectively.
+            </p>
+          </Card>
         </div>
       </section>
 
@@ -112,7 +122,7 @@ export default function Landing() {
             Ready to Transform Your Content?
           </h2>
           <p className="text-lg text-muted-foreground" data-testid="text-cta">
-            Join thousands of creators who use ContentHammer to repurpose their content effortlessly.
+            Join ContentHammer to repurpose your content effortlessly.
           </p>
           <Button 
             size="lg"
