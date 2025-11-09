@@ -196,7 +196,7 @@ function BlogPreview({ content }: { content: BlogContent }) {
 
           <div className="bg-primary/5 p-4 rounded-lg border border-primary/20">
             <div className="flex items-center justify-between mb-2">
-              <h4 className="text-sm font-semibold text-foreground">SEO Score</h4>
+              <h4 className="text-sm font-semibold text-foreground">GEO Score</h4>
               <Badge variant={content.llmo.seoScore >= 80 ? 'default' : content.llmo.seoScore >= 60 ? 'secondary' : 'outline'} className="text-lg font-bold">
                 {content.llmo.seoScore}/100
               </Badge>
