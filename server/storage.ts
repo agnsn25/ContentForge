@@ -86,6 +86,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
+    // Check if this is a new user
+    const existingUser = await this.getUser(userData.id!);
+    const isNewUser = !existingUser;
+
     const [user] = await db
       .insert(users)
       .values(userData)
@@ -97,6 +101,25 @@ export class DatabaseStorage implements IStorage {
         },
       })
       .returning();
+
+    // If this is a new user, create a free subscription with 250 credits
+    if (isNewUser) {
+      const billingPeriodStart = new Date();
+      const billingPeriodEnd = new Date();
+      billingPeriodEnd.setFullYear(billingPeriodEnd.getFullYear() + 100); // Set far in future for free tier
+
+      await this.createSubscription({
+        userId: user.id,
+        plan: 'starter',
+        creditsTotal: '0', // No recurring credits for free tier
+        creditsUsed: '0',
+        oneTimeCredits: '250', // Welcome bonus of 250 credits
+        billingPeriodStart,
+        billingPeriodEnd,
+        status: 'active',
+      });
+    }
+
     return user;
   }
 
