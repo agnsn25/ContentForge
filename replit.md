@@ -43,6 +43,7 @@ ContentHammer is a full-stack application built with React and TypeScript for th
     - **Writing Style Matching:** Users can upload up to two writing samples (max 800 words each) for the AI to analyze and mimic their tone, sentence structure, and vocabulary. This feature is optional and toggleable.
     - **Format-Specific Output Structures:** Each output format (Newsletter, Social Tutorial, Blog Post, X Thread) has a unique, detailed structure with specific word/character limits and content components.
 - **Credit System & Billing:**
+    - **Welcome Bonus:** New users automatically receive 250 free credits upon account creation, stored as one-time credits that never expire
     - **Conversion Rate:** 1 credit = 1,000 tokens
     - **Fixed-Price Model:** Users are charged the quoted estimate (not actual Grok API usage) for predictable pricing
     - **Smart Padding Strategy:** Only AI-generated outputs include 15% safety buffer; known values (system prompts, user content, writing samples) use exact measured token counts
