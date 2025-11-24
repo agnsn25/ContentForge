@@ -54,7 +54,6 @@ Note: This is a Spotify podcast/episode. To get the full transcript, the audio w
 
 export async function extractTextFromFile(file: Express.Multer.File): Promise<string> {
   const buffer = file.buffer;
-  const text = buffer.toString('utf-8');
   
   // For audio/video files, in production you'd use a transcription service
   if (file.mimetype.startsWith('audio/') || file.mimetype.startsWith('video/')) {
@@ -63,6 +62,15 @@ export async function extractTextFromFile(file: Express.Multer.File): Promise<st
 Note: This is an audio/video file. To get a transcript, this file would need to be processed with a transcription service like Whisper AI. For this MVP, please use a YouTube link with captions or upload a text file with the transcript instead.`;
   }
   
+  // For PDF files, in production you'd use a PDF parsing library
+  if (file.mimetype === 'application/pdf') {
+    return `[PDF File: ${file.originalname}]
+
+Note: This is a PDF file. To extract text from PDFs, this file would need to be processed with a PDF parsing library like pdf-parse. For this MVP, please copy and paste the text content from the PDF into a text file, or use a YouTube link with captions instead.`;
+  }
+  
+  // For text files, convert to UTF-8
+  const text = buffer.toString('utf-8');
   return text;
 }
 
