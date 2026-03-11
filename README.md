@@ -18,12 +18,7 @@ ContentHammer is an AI-powered web application that transforms podcasts, videos,
 
 ### ✨ Advanced AI Capabilities
 - **Writing Style Matching**: Upload your own writing samples (up to 2 samples, 800 words each) to have AI mimic your unique voice
-- **LLMO/GEO Optimization**: Optimize blog posts for Large Language Model Optimization and Generative Engine Optimization
-  - Structured for AI citability (ChatGPT, Google AI Overviews, Gemini)
-  - E-E-A-T signals for authority and trustworthiness
-  - SEO score with actionable recommendations
-  - JSON-LD Schema markup generation
-  - People Also Ask questions with quotable answers
+- **Smart Content Structure**: Blog posts use answer-first formatting, question-based headings, and data highlights for maximum readability
 
 ### 🗺️ Strategy Generator
 A 5-step wizard that creates complete content marketing plans:
@@ -145,7 +140,6 @@ Use Replit's integration tools to configure:
 3. **Select Format**: Choose Newsletter, Social, Blog, or X Thread
 4. **Optional Enhancements**:
    - Enable "Match My Writing Style" (requires writing samples)
-   - Enable "LLMO/GEO Optimization" (blog posts only)
 5. **Review Cost**: See credit estimate before proceeding
 6. **Transform**: Confirm and wait for AI processing
 7. **Export**: Copy to clipboard or download as Markdown
@@ -238,7 +232,6 @@ Access the **Billing** page to:
 
 ### Additional Costs
 - **Style Matching**: +exact tokens from writing samples (up to ~1,600 tokens/2 credits)
-- **LLMO Optimization** (blog only): +1,880 tokens (~2 credits)
 - **Strategy Generator**:
   - Step 1 (Analysis): ~2 credits
   - Step 2 (Recommendations): ~2 credits

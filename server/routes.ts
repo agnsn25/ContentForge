@@ -151,7 +151,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/subscription/estimate', async (req: any, res) => {
     try {
-      const { transcript, format, useStyleMatching, useLLMO, type, selectedFormats } = req.body;
+      const { transcript, format, useStyleMatching, type, selectedFormats } = req.body;
 
       if (!transcript) {
         return res.status(400).json({ error: 'Transcript is required' });
@@ -174,7 +174,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           transcript,
           formats,
           writingSampleContents,
-          useLLMO || false
         );
         creditsRequired = estimateResult.totalCredits;
       } else {
@@ -186,7 +185,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           transcript,
           format as TargetFormat,
           writingSampleContents,
-          useLLMO || false
         );
         creditsRequired = estimateResult.credits;
       }
@@ -1162,7 +1160,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Transform content endpoint (works for both authenticated and guest users)
   app.post('/api/transform', upload.single('file'), async (req: any, res) => {
     try {
-      const { sourceType, targetFormat, url, useStyleMatching, useLLMO, model, transcript: preExtractedTranscript, sourceInfo: preExtractedSourceInfo } = req.body;
+      const { sourceType, targetFormat, url, useStyleMatching, model, transcript: preExtractedTranscript, sourceInfo: preExtractedSourceInfo } = req.body;
       const file = req.file;
 
       if (!targetFormat || !['newsletter', 'social', 'blog', 'x'].includes(targetFormat)) {
@@ -1226,12 +1224,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // Calculate credits needed
-        const { credits: creditsNeeded, transcriptTokens, estimatedOutputTokens, breakdown } = 
+        const { credits: creditsNeeded, transcriptTokens, estimatedOutputTokens, breakdown } =
           calculateQuickTransformCredits(
             transcript,
             targetFormat as TargetFormat,
             writingSampleContents,
-            useLLMO === 'true'
           );
 
         // Check if user has sufficient credits
@@ -1265,7 +1262,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           outputTokens: estimatedOutputTokens.toString(),
           features: {
             useStyleMatching: useStyleMatching === 'true',
-            useLLMO: useLLMO === 'true',
           },
           description: breakdown,
         });
@@ -1286,14 +1282,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         transcript,
         targetFormat: targetFormat as TargetFormat,
         transformedContent: null,
-        useLLMO: useLLMO === 'true' ? 'true' : 'false',
         status: 'processing',
         error: null,
       });
 
       // Start async transformation (don't await)
       const grokModel = model || 'grok-4-fast-reasoning';
-      processTransformation(job.id, transcript, targetFormat as TargetFormat, sourceInfo, writingSamples, useLLMO === 'true', grokModel)
+      processTransformation(job.id, transcript, targetFormat as TargetFormat, sourceInfo, writingSamples, grokModel)
         .catch(err => console.error('Transformation error:', err));
 
       res.json({ jobId: job.id, status: 'processing' });
@@ -1326,7 +1321,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Strategy Generator Routes
   app.post('/api/strategy/start', upload.single('file'), async (req: any, res) => {
     try {
-      const { sourceType, url, useStyleMatching, useLLMO, transcript: preExtractedTranscript, sourceInfo: preExtractedSourceInfo } = req.body;
+      const { sourceType, url, useStyleMatching, transcript: preExtractedTranscript, sourceInfo: preExtractedSourceInfo } = req.body;
       const file = req.file;
       const userId = req.user?.claims?.sub || null;
 
@@ -1364,7 +1359,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fileName,
         transcript,
         useStyleMatching: useStyleMatching === 'true' ? 'true' : 'false',
-        useLLMO: useLLMO === 'true' ? 'true' : 'false',
         currentStep: '1',
         step1Output: null,
         step2Output: null,
@@ -1493,7 +1487,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           job.transcript,
           selectedFormats,
           writingSampleContents,
-          job.useLLMO === 'true'
         );
 
         // Check if user has sufficient credits
@@ -1527,7 +1520,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           outputTokens: null,
           features: {
             useStyleMatching: job.useStyleMatching === 'true',
-            useLLMO: job.useLLMO === 'true',
             selectedFormats,
           },
           description: `Strategy Generator (${selectedFormats.length} formats: ${selectedFormats.join(', ')})`,
@@ -1540,8 +1532,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         writingSamples = await storage.getUserWritingSamples(job.userId);
       }
       
-      const useLLMO = job.useLLMO === 'true';
-      const result = await executeStep4(job.transcript, sourceInfo, selectedFormats, selectedTitles, writingSamples, useLLMO);
+      const result = await executeStep4(job.transcript, sourceInfo, selectedFormats, selectedTitles, writingSamples);
 
       await storage.updateStrategyJob(job.id, {
         step4Output: JSON.stringify(result),
@@ -1615,12 +1606,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 }
 
 async function processTransformation(
-  jobId: string, 
-  transcript: string, 
+  jobId: string,
+  transcript: string,
   targetFormat: TargetFormat,
   sourceInfo: string,
   writingSamples?: any[],
-  useLLMO?: boolean,
   model?: string
 ) {
   try {
@@ -1630,10 +1620,7 @@ async function processTransformation(
     if (writingSamples && writingSamples.length > 0) {
       console.log('Using style matching with', writingSamples.length, 'writing sample(s)');
     }
-    if (useLLMO && targetFormat === 'blog') {
-      console.log('Using LLMO optimization for blog post');
-    }
-    const transformedContent = await transformContent(transcript, targetFormat, sourceInfo, writingSamples, useLLMO, model);
+    const transformedContent = await transformContent(transcript, targetFormat, sourceInfo, writingSamples, model);
     
     await storage.updateContentJob(jobId, {
       transformedContent,

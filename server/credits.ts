@@ -26,10 +26,6 @@ const FORMAT_SYSTEM_TOKENS: Record<TargetFormat, number> = {
   x: 500,
 };
 
-// LLMO adds extra tokens
-const LLMO_EXTRA_OUTPUT_TOKENS = 1380;  // AI-generated metadata: Base 1200 → 1380 with 15% buffer
-const LLMO_EXTRA_SYSTEM_TOKENS = 500;   // Known system prompt (exact value, no padding)
-
 /**
  * Estimate transcript tokens from text
  * Rule of thumb: 1 token ≈ 4 characters
@@ -46,7 +42,6 @@ export function calculateTotalTokens(
   format: TargetFormat,
   options: {
     styleMatchingTokens?: number;  // Exact measured tokens from user writing samples
-    useLLMO?: boolean;
   } = {}
 ): {
   inputTokens: number;
@@ -54,17 +49,11 @@ export function calculateTotalTokens(
   totalTokens: number;
 } {
   let inputTokens = transcriptTokens + FORMAT_SYSTEM_TOKENS[format];
-  let outputTokens = FORMAT_OUTPUT_TOKENS[format];
+  const outputTokens = FORMAT_OUTPUT_TOKENS[format];
 
   // Add style matching tokens to input (exact measured value from user samples)
   if (options.styleMatchingTokens) {
     inputTokens += options.styleMatchingTokens;
-  }
-
-  // Add LLMO tokens (both input prompt and output metadata)
-  if (options.useLLMO && format === 'blog') {
-    inputTokens += LLMO_EXTRA_SYSTEM_TOKENS;
-    outputTokens += LLMO_EXTRA_OUTPUT_TOKENS;
   }
 
   return {
@@ -83,7 +72,6 @@ export function calculateCredits(
   format: TargetFormat,
   options: {
     styleMatchingTokens?: number;  // Exact measured tokens from user writing samples
-    useLLMO?: boolean;
   } = {}
 ): number {
   const { totalTokens } = calculateTotalTokens(transcriptTokens, format, options);
@@ -101,7 +89,6 @@ export function calculateQuickTransformCredits(
   transcript: string,
   format: TargetFormat,
   writingSamples: string[] = [],
-  useLLMO: boolean = false
 ): {
   credits: number;
   transcriptTokens: number;
@@ -109,20 +96,19 @@ export function calculateQuickTransformCredits(
   breakdown: string;
 } {
   const transcriptTokens = estimateTokens(transcript);
-  
+
   // Measure actual writing sample tokens if provided
   const styleMatchingTokens = writingSamples.length > 0
     ? writingSamples.reduce((sum, sample) => sum + estimateTokens(sample), 0)
     : undefined;
-  
-  const credits = calculateCredits(transcriptTokens, format, { styleMatchingTokens, useLLMO });
-  
-  const { outputTokens } = calculateTotalTokens(transcriptTokens, format, { styleMatchingTokens, useLLMO });
-  
+
+  const credits = calculateCredits(transcriptTokens, format, { styleMatchingTokens });
+
+  const { outputTokens } = calculateTotalTokens(transcriptTokens, format, { styleMatchingTokens });
+
   let breakdown = `${format} transformation`;
   if (styleMatchingTokens) breakdown += ' + style matching';
-  if (useLLMO) breakdown += ' + LLMO optimization';
-  
+
   return {
     credits,
     transcriptTokens,
@@ -139,7 +125,6 @@ export function calculateStrategyGeneratorCredits(
   transcript: string,
   selectedFormats: TargetFormat[],
   writingSamples: string[] = [],
-  useLLMO: boolean = false
 ): {
   totalCredits: number;
   breakdown: {
@@ -174,7 +159,7 @@ export function calculateStrategyGeneratorCredits(
   // Step 4: Content Generation (full transformation for each format, includes 15% buffer)
   let step4Tokens = 0;
   selectedFormats.forEach(format => {
-    const { totalTokens: formatTokens } = calculateTotalTokens(transcriptTokens, format, { styleMatchingTokens, useLLMO });
+    const { totalTokens: formatTokens } = calculateTotalTokens(transcriptTokens, format, { styleMatchingTokens });
     step4Tokens += formatTokens;
   });
   totalTokens += step4Tokens;
@@ -216,7 +201,6 @@ export const PLAN_DETAILS = {
     credits: 1500,
     features: [
       'Everything in Starter',
-      'LLMO/GEO Optimization',
       'Priority Support',
       'Advanced Analytics',
     ],

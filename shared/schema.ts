@@ -36,7 +36,6 @@ export const contentJobs = pgTable("content_jobs", {
   transcript: text("transcript").notNull(),
   targetFormat: text("target_format").notNull(), // 'newsletter' | 'social' | 'blog'
   transformedContent: text("transformed_content"),
-  useLLMO: text("use_llmo").default('false'), // 'true' | 'false' - LLMO optimization for blog posts
   status: text("status").notNull().default('processing'), // 'processing' | 'completed' | 'error'
   error: text("error"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -59,7 +58,6 @@ export const strategyJobs = pgTable("strategy_jobs", {
   fileName: text("file_name"),
   transcript: text("transcript").notNull(),
   useStyleMatching: text("use_style_matching").notNull().default('false'),
-  useLLMO: text("use_llmo").default('false'), // 'true' | 'false' - LLMO optimization for blog posts
   currentStep: text("current_step").notNull().default('1'),
   step1Output: text("step1_output"),
   step2Output: text("step2_output"),
@@ -135,18 +133,6 @@ export interface BlogContent {
     content: string;
   }[];
   conclusion: string;
-  llmo?: {
-    keywords: string[];
-    peopleAlsoAsk: {
-      question: string;
-      answer: string;
-    }[];
-    schemaMarkup: string;
-    urlSlug: string;
-    imageAltTexts: string[];
-    seoScore: number;
-    recommendations: string[];
-  };
   metadata: {
     originalSource: string;
     transformedAt: string;
@@ -275,7 +261,7 @@ export const creditTransactions = pgTable("credit_transactions", {
   creditsCharged: text("credits_charged").notNull(), // Amount of credits deducted
   transcriptTokens: text("transcript_tokens"), // Tokens in transcript
   outputTokens: text("output_tokens"), // Estimated output tokens
-  features: jsonb("features"), // {useStyleMatching: boolean, useLLMO: boolean}
+  features: jsonb("features"), // {useStyleMatching: boolean}
   description: text("description").notNull(), // Human-readable description
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

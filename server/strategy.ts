@@ -137,22 +137,17 @@ export async function executeStep4(
   selectedFormats: TargetFormat[],
   selectedTitles: { format: TargetFormat; title: string }[],
   writingSamples?: any[],
-  useLLMO?: boolean
 ): Promise<Step4Content[]> {
   const results: Step4Content[] = [];
-  
+
   for (const format of selectedFormats) {
     const selectedTitle = selectedTitles.find(t => t.format === format);
-    
-    // Apply LLMO only for blog format
-    const shouldUseLLMO = format === 'blog' && useLLMO;
-    
+
     const transformedContent = await transformContent(
       transcript,
       format,
       sourceInfo,
       writingSamples,
-      shouldUseLLMO
     );
     
     const content = JSON.parse(transformedContent);

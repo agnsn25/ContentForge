@@ -44,7 +44,6 @@ const plans = [
     description: 'For serious creators and agencies',
     features: [
       'Everything in Starter',
-      'LLMO/GEO Optimization',
       '1,500 credits per month',
       'Priority Support',
       'Advanced Analytics',
@@ -259,10 +258,6 @@ export default function Pricing() {
                   <span className="font-medium">~40 credits</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Blog + LLMO (30min podcast)</span>
-                  <span className="font-medium">~70 credits</span>
-                </div>
-                <div className="flex justify-between">
                   <span className="text-muted-foreground">X Thread (15min podcast)</span>
                   <span className="font-medium">~20 credits</span>
                 </div>
@@ -278,10 +273,6 @@ export default function Pricing() {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">3 formats + Style Matching</span>
                   <span className="font-medium">~180 credits</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">4 formats + LLMO</span>
-                  <span className="font-medium">~250 credits</span>
                 </div>
               </div>
             </div>

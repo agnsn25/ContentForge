@@ -12,86 +12,8 @@ export async function transformContent(
   targetFormat: TargetFormat,
   sourceInfo: string,
   writingSamples?: WritingSample[],
-  useLLMO?: boolean,
   model: string = "grok-4-fast-reasoning"
 ): Promise<string> {
-  // Create LLMO-enhanced blog prompt if needed
-  const llmoBlogPrompt = `Convert this transcript into an LLMO/GEO-optimized blog post (800-1200 words).
-
-🎯 LLMO/GEO OPTIMIZATION PRIORITY:
-This content MUST be optimized for Large Language Model Optimization (LLMO) and Generative Engine Optimization (GEO). Your goal is to make this content highly citable by AI systems (ChatGPT, Google AI Overviews, Gemini) while maintaining excellent traditional SEO.
-
-📊 CORE LLMO PRINCIPLES:
-1. Authority & E-E-A-T: Demonstrate expertise, experience, authoritativeness, and trustworthiness
-2. Extractability: Make content easy for LLMs to quote and cite
-3. Direct Answers: Use Q&A format with clear, concise answers
-4. Structured Data: Organize with semantic HTML hierarchy
-5. Original Insights: Include unique data, statistics, or perspectives
-6. Recency: Reference current trends and timely information
-
-✍️ CONTENT REQUIREMENTS:
-- Create an attention-grabbing, keyword-rich title (60 chars max)
-- Write a compelling introduction with the primary keyword in the first paragraph
-- Use descriptive, keyword-rich H2/H3 headings (questions work best)
-- Include direct, quotable answers immediately after question headings
-- Add original insights, statistics, or unique perspectives
-- Use clear structure with natural transitions
-- Include a conclusion with key takeaways
-- If no writing style guide was provided above, use a conversational but authoritative tone
-
-🔍 LLMO ANALYSIS REQUIREMENTS:
-You must also generate comprehensive SEO/LLMO metadata:
-
-1. Extract 5-8 primary and secondary keywords from the content
-2. Generate 4-6 "People Also Ask" questions with direct, quotable answers (2-3 sentences each)
-3. Create JSON-LD Schema markup for Article type (include headline, author, datePublished, description)
-4. Generate an SEO-friendly URL slug (lowercase, hyphens, max 60 chars)
-5. Create 3-4 descriptive image alt text suggestions
-6. Provide an SEO score (0-100) based on:
-   - Keyword optimization (20 points)
-   - Content structure (20 points)
-   - Readability (20 points)
-   - LLMO extractability (20 points)
-   - E-E-A-T signals (20 points)
-7. List 3-5 specific recommendations to improve the score
-
-Return ONLY a valid JSON object with this structure:
-{
-  "title": "Keyword-rich, attention-grabbing title (max 60 chars)",
-  "metaDescription": "Compelling meta description with primary keyword (150-160 chars)",
-  "introduction": "Introduction paragraph with primary keyword in first sentence",
-  "sections": [
-    {
-      "heading": "Descriptive question or keyword-rich heading",
-      "content": "Direct answer or detailed content with natural keyword usage and quotable insights"
-    }
-  ],
-  "conclusion": "Conclusion with key takeaways and primary keyword",
-  "llmo": {
-    "keywords": ["primary keyword", "secondary keyword 1", "secondary keyword 2", "..."],
-    "peopleAlsoAsk": [
-      {
-        "question": "What is [topic]?",
-        "answer": "Direct, quotable 2-3 sentence answer that LLMs can cite"
-      }
-    ],
-    "schemaMarkup": "{\\"@context\\":\\"https://schema.org\\",\\"@type\\":\\"Article\\",\\"headline\\":\\"...\\",...}",
-    "urlSlug": "seo-friendly-url-slug",
-    "imageAltTexts": ["Descriptive alt text 1", "Descriptive alt text 2", "..."],
-    "seoScore": 85,
-    "recommendations": [
-      "Add more original data or statistics",
-      "Include more direct Q&A format sections",
-      "..."
-    ]
-  },
-  "metadata": {
-    "originalSource": "${sourceInfo}",
-    "transformedAt": "${new Date().toISOString()}",
-    "format": "blog",
-    "wordCount": 0
-  }
-}`;
 
   const systemPrompts: Record<TargetFormat, string> = {
     newsletter: `Transform this transcript into a newsletter format (400-600 words).
@@ -161,6 +83,9 @@ Requirements:
 - Create an attention-grabbing title
 - Write a compelling introduction
 - Organize content into 3-5 sections with descriptive headings
+- Use question-based headings where natural
+- Lead each section with a direct, clear answer before elaborating
+- Highlight specific data points, statistics, or concrete examples from the transcript
 - Use natural transitions between ideas
 - Include a conclusion with key takeaways
 - Stay true to the content and ideas from the transcript
@@ -220,13 +145,7 @@ Return ONLY a valid JSON object with this structure:
     // Build the system prompt with style matching FIRST if writing samples are provided
     let systemPrompt = '';
     
-    // Determine which base prompt to use (LLMO-enhanced blog or regular)
-    let basePrompt = '';
-    if (targetFormat === 'blog' && useLLMO) {
-      basePrompt = llmoBlogPrompt;
-    } else {
-      basePrompt = systemPrompts[targetFormat];
-    }
+    const basePrompt = systemPrompts[targetFormat];
     
     if (writingSamples && writingSamples.length > 0) {
       const styleMatchingPrompt = `🎯 CRITICAL PRIORITY: WRITING STYLE MATCHING

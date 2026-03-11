@@ -50,7 +50,6 @@ ContentHammer is a full-stack application built with React and TypeScript for th
     - **Token Breakdown:**
         - Format outputs (padded): Newsletter/Social 805, Blog 1,610, X Thread 575
         - System prompts (exact): 500 tokens per format
-        - LLMO output (padded): 1,380 tokens; LLMO system (exact): 500 tokens
         - Style matching: Exact measured tokens from user's writing samples (up to 2 samples, 800 words each)
         - Transcript: Exact measured tokens (1 token ≈ 4 characters)
         - Strategy Generator steps: Mix of exact system prompts (500) and padded AI outputs (575, 460, 345/format, 690)

@@ -103,13 +103,13 @@ export default function Landing() {
             </p>
           </Card>
 
-          <Card className="p-6 space-y-4" data-testid="card-feature-geo">
+          <Card className="p-6 space-y-4" data-testid="card-feature-structure">
             <div className="h-12 w-12 rounded-lg bg-secondary/10 flex items-center justify-center">
               <Globe className="h-6 w-6 text-secondary" />
             </div>
-            <h3 className="font-semibold text-lg">Generative Engine Optimization</h3>
+            <h3 className="font-semibold text-lg">Smart Content Structure</h3>
             <p className="text-sm text-muted-foreground">
-              Content optimized for AI search engines and language models. Maximize your visibility in the AI era.
+              Well-structured blog posts with answer-first formatting, data highlights, and scannable sections.
             </p>
           </Card>
         </div>
