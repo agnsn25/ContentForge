@@ -1,106 +1,11 @@
 import spotifyUrlInfo from 'spotify-url-info';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+import * as fs from 'fs/promises';
+import * as os from 'os';
+import * as path from 'path';
 
-const INNERTUBE_API_KEY = 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8';
-
-async function fetchVideoInfo(videoId: string): Promise<{ title: string; captionTracks: any[] }> {
-  const playerRes = await fetch(
-    `https://www.youtube.com/youtubei/v1/player?key=${INNERTUBE_API_KEY}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        context: {
-          client: {
-            clientName: 'ANDROID',
-            clientVersion: '19.09.37',
-            hl: 'en',
-          },
-        },
-        videoId,
-      }),
-    }
-  );
-
-  if (!playerRes.ok) {
-    throw new Error(`YouTube API returned status ${playerRes.status}`);
-  }
-
-  const data = await playerRes.json();
-
-  if (data?.playabilityStatus?.status !== 'OK') {
-    const reason = data?.playabilityStatus?.reason || 'Video is unavailable';
-    throw new Error(reason);
-  }
-
-  const title = data?.videoDetails?.title || `YouTube Video (${videoId})`;
-  const captionTracks = data?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
-
-  if (!captionTracks || captionTracks.length === 0) {
-    throw new Error('No captions available for this video.');
-  }
-
-  return { title, captionTracks };
-}
-
-function parseCaptionXml(xml: string): Array<{ start: number; text: string }> {
-  const segments: Array<{ start: number; text: string }> = [];
-
-  const pRegex = /<p\s+t="(\d+)"[^>]*>([\s\S]*?)<\/p>/g;
-  let pMatch;
-
-  while ((pMatch = pRegex.exec(xml)) !== null) {
-    const startMs = parseInt(pMatch[1], 10);
-    const innerContent = pMatch[2];
-
-    const sTexts: string[] = [];
-    const sRegex = /<s[^>]*>([^<]*)<\/s>/g;
-    let sMatch;
-    while ((sMatch = sRegex.exec(innerContent)) !== null) {
-      if (sMatch[1]) sTexts.push(sMatch[1]);
-    }
-
-    let text = sTexts.length > 0
-      ? sTexts.join('')
-      : innerContent.replace(/<[^>]+>/g, '');
-
-    text = text
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'")
-      .replace(/&apos;/g, "'")
-      .replace(/\n/g, ' ')
-      .trim();
-
-    if (text) {
-      segments.push({ start: startMs / 1000, text });
-    }
-  }
-
-  if (segments.length === 0) {
-    const textRegex = /<text start="([^"]*)" dur="[^"]*"[^>]*>([\s\S]*?)<\/text>/g;
-    let textMatch;
-    while ((textMatch = textRegex.exec(xml)) !== null) {
-      const start = parseFloat(textMatch[1]);
-      let text = textMatch[2]
-        .replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"')
-        .replace(/&#39;/g, "'")
-        .replace(/&apos;/g, "'")
-        .replace(/<[^>]+>/g, '')
-        .replace(/\n/g, ' ')
-        .trim();
-      if (text) {
-        segments.push({ start, text });
-      }
-    }
-  }
-
-  return segments;
-}
+const execFileAsync = promisify(execFile);
 
 export async function getYoutubeTranscript(url: string): Promise<{ transcript: string; title: string }> {
   try {
@@ -111,35 +16,67 @@ export async function getYoutubeTranscript(url: string): Promise<{ transcript: s
 
     console.log('Fetching YouTube transcript for:', url);
 
-    const { title, captionTracks } = await fetchVideoInfo(videoId);
+    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'yt-transcript-'));
+    const outputTemplate = path.join(tmpDir, 'sub');
 
-    const englishTrack = captionTracks.find((t: any) => t.languageCode === 'en') ||
-                         captionTracks.find((t: any) => t.languageCode?.startsWith('en')) ||
-                         captionTracks[0];
+    try {
+      // Get video title
+      const { stdout: titleOut } = await execFileAsync('yt-dlp', [
+        '--print', 'title',
+        '--no-download',
+        url,
+      ], { timeout: 30000 });
+      const title = titleOut.trim() || `YouTube Video (${videoId})`;
 
-    const captionRes = await fetch(englishTrack.baseUrl, {
-      headers: { 'User-Agent': 'com.google.android.youtube/19.09.37' },
-    });
+      // Download subtitles as json3
+      await execFileAsync('yt-dlp', [
+        '--write-auto-sub',
+        '--write-sub',
+        '--sub-lang', 'en',
+        '--sub-format', 'json3',
+        '--skip-download',
+        '-o', outputTemplate,
+        url,
+      ], { timeout: 30000 });
 
-    if (!captionRes.ok) {
-      throw new Error(`Failed to fetch caption track: ${captionRes.status}`);
+      // Find the subtitle file (could be .en.json3)
+      const files = await fs.readdir(tmpDir);
+      const subFile = files.find(f => f.endsWith('.json3'));
+
+      if (!subFile) {
+        throw new Error('No captions available for this video.');
+      }
+
+      const jsonContent = await fs.readFile(path.join(tmpDir, subFile), 'utf-8');
+      const json = JSON.parse(jsonContent);
+      const events = json.events || [];
+
+      const segments: Array<{ start: number; text: string }> = [];
+      for (const event of events) {
+        if (event.segs) {
+          const text = event.segs.map((s: any) => s.utf8 || '').join('').trim();
+          if (text && text !== '\n') {
+            segments.push({ start: (event.tStartMs || 0) / 1000, text });
+          }
+        }
+      }
+
+      if (segments.length === 0) {
+        throw new Error('Transcript was empty after parsing.');
+      }
+
+      const transcript = segments
+        .map(seg => {
+          const timestamp = formatTimestamp(seg.start);
+          return `[${timestamp}] ${seg.text}`;
+        })
+        .join('\n');
+
+      return { transcript, title };
+    } finally {
+      // Cleanup temp dir
+      await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
     }
-
-    const captionXml = await captionRes.text();
-    const segments = parseCaptionXml(captionXml);
-
-    if (segments.length === 0) {
-      throw new Error('Transcript was empty after parsing.');
-    }
-
-    const transcript = segments
-      .map(seg => {
-        const timestamp = formatTimestamp(seg.start);
-        return `[${timestamp}] ${seg.text}`;
-      })
-      .join('\n');
-
-    return { transcript, title };
   } catch (error) {
     console.error('YouTube transcript error:', error);
     throw new Error(`Failed to fetch YouTube transcript: ${error instanceof Error ? error.message : 'Unknown error'}`);

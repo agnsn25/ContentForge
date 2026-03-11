@@ -7,9 +7,7 @@ import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
 
-if (!process.env.REPLIT_DOMAINS) {
-  throw new Error("Environment variable REPLIT_DOMAINS not provided");
-}
+const isLocalDev = !process.env.REPLIT_DOMAINS;
 
 const getOidcConfig = memoize(
   async () => {
@@ -37,7 +35,7 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: true,
+      secure: !isLocalDev,
       maxAge: sessionTtl,
     },
   });
@@ -66,6 +64,31 @@ async function upsertUser(claims: any) {
 export async function setupAuth(app: Express) {
   app.set("trust proxy", 1);
   app.use(getSession());
+
+  if (isLocalDev) {
+    // Local dev: auto-login as a dev user, skip Replit OIDC
+    app.use((req, _res, next) => {
+      if (!req.session) return next();
+      (req as any).user = {
+        claims: { sub: "local-dev-user", email: "dev@localhost", first_name: "Dev", last_name: "User" },
+        expires_at: Math.floor(Date.now() / 1000) + 86400,
+      };
+      (req as any).isAuthenticated = () => true;
+      next();
+    });
+    // Ensure dev user exists in DB
+    storage.upsertUser({
+      id: "local-dev-user",
+      email: "dev@localhost",
+      firstName: "Dev",
+      lastName: "User",
+      profileImageUrl: undefined,
+    }).catch(() => {});
+    app.get("/api/login", (_req, res) => res.redirect("/"));
+    app.get("/api/logout", (_req, res) => res.redirect("/"));
+    return;
+  }
+
   app.use(passport.initialize());
   app.use(passport.session());
 
@@ -124,6 +147,8 @@ export async function setupAuth(app: Express) {
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
+  if (isLocalDev) return next();
+
   const user = req.user as any;
 
   if (!req.isAuthenticated() || !user.expires_at) {
