@@ -1,6 +1,7 @@
 // xAI Grok integration for content transformation
 import OpenAI from "openai";
 import type { TargetFormat, WritingSample } from "@shared/schema";
+import { estimateTokens, MAX_CONTEXT_TOKENS } from "./transcriptCleaner";
 
 const openai = new OpenAI({ 
   baseURL: "https://api.x.ai/v1", 
@@ -13,7 +14,7 @@ export async function transformContent(
   sourceInfo: string,
   writingSamples?: WritingSample[],
   model: string = "grok-4-fast-reasoning"
-): Promise<string> {
+): Promise<{ content: string; usage: { promptTokens: number; completionTokens: number; totalTokens: number } | null }> {
 
   const systemPrompts: Record<TargetFormat, string> = {
     newsletter: `Transform this transcript into a newsletter format (400-600 words).
@@ -142,6 +143,12 @@ Return ONLY a valid JSON object with this structure:
   };
 
   try {
+    // Context window guard
+    const estimatedInputTokens = estimateTokens(transcript);
+    if (estimatedInputTokens > MAX_CONTEXT_TOKENS) {
+      throw new Error('Transcript too long. Please use a shorter video or trim the content.');
+    }
+
     // Build the system prompt with style matching FIRST if writing samples are provided
     let systemPrompt = '';
     
@@ -211,9 +218,20 @@ The reader should NOT be able to tell this wasn't written by the original author
       throw new Error('No content returned from Grok');
     }
 
+    // Read actual token usage from API response
+    const usage = response.usage ? {
+      promptTokens: response.usage.prompt_tokens,
+      completionTokens: response.usage.completion_tokens,
+      totalTokens: response.usage.total_tokens,
+    } : null;
+
+    if (usage) {
+      console.log(`[Grok Usage] prompt=${usage.promptTokens} completion=${usage.completionTokens} total=${usage.totalTokens}`);
+    }
+
     // Validate JSON structure based on format
     const parsed = JSON.parse(content);
-    
+
     // Basic validation for each format
     if (targetFormat === 'newsletter') {
       if (!parsed.title || !parsed.intro || !parsed.sections || !parsed.quickTakeaway || !parsed.callToAction) {
@@ -233,7 +251,7 @@ The reader should NOT be able to tell this wasn't written by the original author
       }
     }
 
-    return content;
+    return { content, usage };
   } catch (error) {
     console.error('Grok transformation error:', error);
     throw new Error(`Failed to transform content: ${error instanceof Error ? error.message : 'Unknown error'}`);

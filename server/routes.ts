@@ -8,8 +8,9 @@ import { users } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { transformContent } from "./grok";
 import { getYoutubeTranscript, getSpotifyTranscript, extractTextFromFile } from "./transcript";
+import { cleanTranscript, estimateTokens, MAX_CONTEXT_TOKENS } from "./transcriptCleaner";
 import { executeStep1, executeStep2, executeStep3, executeStep4, executeStep5 } from "./strategy";
-import type { TargetFormat } from "@shared/schema";
+import type { TargetFormat, SourceType } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { 
   calculateQuickTransformCredits, 
@@ -1145,11 +1146,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Invalid source type or missing data' });
       }
 
+      // Clean transcript before returning
+      const { cleaned, stats: cleaningStats } = cleanTranscript(transcript, sourceType as SourceType);
+      console.log(`[Transcript Cleaning] ${sourceType}: ${cleaningStats.reductionPercent}% reduction (${cleaningStats.originalLength} → ${cleaningStats.cleanedLength} chars), ${cleaningStats.duplicatesRemoved} dupes removed, ${cleaningStats.fillersRemoved} fillers removed`);
+
       res.json({
-        transcript,
+        transcript: cleaned,
+        rawTranscript: transcript,
         sourceUrl,
         fileName,
         sourceInfo,
+        cleaningStats,
       });
     } catch (error) {
       console.error("Error extracting transcript:", error);
@@ -1173,6 +1180,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let sourceInfo = '';
 
       // If transcript is already provided (from extract-transcript), use it
+      // Pre-extracted transcripts are already cleaned by extract-transcript
       if (preExtractedTranscript) {
         transcript = preExtractedTranscript;
         sourceInfo = preExtractedSourceInfo || 'Pre-extracted content';
@@ -1200,6 +1208,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } else {
           return res.status(400).json({ error: 'Invalid source type or missing data' });
         }
+
+        // Clean transcript extracted in this route (fallback path)
+        const { cleaned, stats: cleaningStats } = cleanTranscript(transcript, sourceType as SourceType);
+        console.log(`[Transform Cleaning] ${sourceType}: ${cleaningStats.reductionPercent}% reduction (${cleaningStats.originalLength} → ${cleaningStats.cleanedLength} chars)`);
+        transcript = cleaned;
+      }
+
+      // Context window guard — reject before charging credits
+      const estimatedInputTokens = estimateTokens(transcript);
+      if (estimatedInputTokens > MAX_CONTEXT_TOKENS) {
+        return res.status(400).json({
+          error: 'Transcript too long. Please use a shorter video or trim the content.',
+          estimatedTokens: estimatedInputTokens,
+          maxTokens: MAX_CONTEXT_TOKENS,
+        });
       }
 
       // Get userId if user is authenticated
@@ -1330,6 +1353,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let fileName = '';
 
       // If transcript is already provided (from extract-transcript), use it
+      // Pre-extracted transcripts are already cleaned by extract-transcript
       if (preExtractedTranscript) {
         transcript = preExtractedTranscript;
         fileName = preExtractedSourceInfo || 'Pre-extracted content';
@@ -1350,6 +1374,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } else {
           return res.status(400).json({ error: 'Invalid source type or missing data' });
         }
+
+        // Clean transcript extracted in this route (fallback path)
+        const { cleaned, stats: cleaningStats } = cleanTranscript(transcript, sourceType as SourceType);
+        console.log(`[Strategy Cleaning] ${sourceType}: ${cleaningStats.reductionPercent}% reduction (${cleaningStats.originalLength} → ${cleaningStats.cleanedLength} chars)`);
+        transcript = cleaned;
       }
 
       const job = await storage.createStrategyJob({
@@ -1620,8 +1649,12 @@ async function processTransformation(
     if (writingSamples && writingSamples.length > 0) {
       console.log('Using style matching with', writingSamples.length, 'writing sample(s)');
     }
-    const transformedContent = await transformContent(transcript, targetFormat, sourceInfo, writingSamples, model);
-    
+    const { content: transformedContent, usage } = await transformContent(transcript, targetFormat, sourceInfo, writingSamples, model);
+
+    if (usage) {
+      console.log(`[Transform Usage] job=${jobId} estimated=${estimateTokens(transcript)} actual_prompt=${usage.promptTokens} actual_completion=${usage.completionTokens} actual_total=${usage.totalTokens}`);
+    }
+
     await storage.updateContentJob(jobId, {
       transformedContent,
       status: 'completed',

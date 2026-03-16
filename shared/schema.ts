@@ -263,6 +263,9 @@ export const creditTransactions = pgTable("credit_transactions", {
   outputTokens: text("output_tokens"), // Estimated output tokens
   features: jsonb("features"), // {useStyleMatching: boolean}
   description: text("description").notNull(), // Human-readable description
+  actualPromptTokens: text("actual_prompt_tokens"),
+  actualCompletionTokens: text("actual_completion_tokens"),
+  actualTotalTokens: text("actual_total_tokens"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

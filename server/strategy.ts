@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import type { Step1Analysis, Step2Recommendation, Step3TitleOption, Step4Content, Step5Schedule, TargetFormat, TransformedContent } from "@shared/schema";
 import { transformContent } from "./grok";
+import { estimateTokens, MAX_CONTEXT_TOKENS } from "./transcriptCleaner";
 
 const openai = new OpenAI({ 
   baseURL: "https://api.x.ai/v1", 
@@ -8,6 +9,12 @@ const openai = new OpenAI({
 });
 
 export async function executeStep1(transcript: string, sourceInfo: string): Promise<Step1Analysis> {
+  // Context window guard — fail fast before burning API credits
+  const estimatedInputTokens = estimateTokens(transcript);
+  if (estimatedInputTokens > MAX_CONTEXT_TOKENS) {
+    throw new Error('Transcript too long. Please use a shorter video or trim the content.');
+  }
+
   const systemPrompt = `You are a content strategy expert. Analyze this transcript and identify:
 1. The main topic/subject matter
 2. The target audience (who would benefit most from this content)
@@ -33,13 +40,17 @@ Return ONLY a valid JSON object with this structure:
     temperature: 0.7,
   });
 
+  if (completion.usage) {
+    console.log(`[Strategy Step1 Usage] prompt=${completion.usage.prompt_tokens} completion=${completion.usage.completion_tokens} total=${completion.usage.total_tokens}`);
+  }
+
   const content = completion.choices[0]?.message?.content || "";
-  
+
   const jsonMatch = content.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
     throw new Error('Invalid response format from AI');
   }
-  
+
   return JSON.parse(jsonMatch[0]);
 }
 
@@ -80,13 +91,17 @@ Return ONLY a valid JSON array with this structure:
     temperature: 0.7,
   });
 
+  if (completion.usage) {
+    console.log(`[Strategy Step2 Usage] prompt=${completion.usage.prompt_tokens} completion=${completion.usage.completion_tokens} total=${completion.usage.total_tokens}`);
+  }
+
   const content = completion.choices[0]?.message?.content || "";
-  
+
   const jsonMatch = content.match(/\[[\s\S]*\]/);
   if (!jsonMatch) {
     throw new Error('Invalid response format from AI');
   }
-  
+
   return JSON.parse(jsonMatch[0]);
 }
 
@@ -121,13 +136,17 @@ Return ONLY a valid JSON array with this structure:
     temperature: 0.8,
   });
 
+  if (completion.usage) {
+    console.log(`[Strategy Step3 Usage] prompt=${completion.usage.prompt_tokens} completion=${completion.usage.completion_tokens} total=${completion.usage.total_tokens}`);
+  }
+
   const content = completion.choices[0]?.message?.content || "";
-  
+
   const jsonMatch = content.match(/\[[\s\S]*\]/);
   if (!jsonMatch) {
     throw new Error('Invalid response format from AI');
   }
-  
+
   return JSON.parse(jsonMatch[0]);
 }
 
@@ -143,14 +162,14 @@ export async function executeStep4(
   for (const format of selectedFormats) {
     const selectedTitle = selectedTitles.find(t => t.format === format);
 
-    const transformedContent = await transformContent(
+    const result = await transformContent(
       transcript,
       format,
       sourceInfo,
       writingSamples,
     );
-    
-    const content = JSON.parse(transformedContent);
+
+    const content = JSON.parse(result.content);
     
     if (selectedTitle) {
       content.title = selectedTitle.title;
@@ -219,12 +238,16 @@ Return ONLY a valid JSON array with this structure:
     temperature: 0.7,
   });
 
+  if (completion.usage) {
+    console.log(`[Strategy Step5 Usage] prompt=${completion.usage.prompt_tokens} completion=${completion.usage.completion_tokens} total=${completion.usage.total_tokens}`);
+  }
+
   const content = completion.choices[0]?.message?.content || "";
-  
+
   const jsonMatch = content.match(/\[[\s\S]*\]/);
   if (!jsonMatch) {
     throw new Error('Invalid response format from AI');
   }
-  
+
   return JSON.parse(jsonMatch[0]);
 }
